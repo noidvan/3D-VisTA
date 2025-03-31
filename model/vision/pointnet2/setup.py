@@ -14,7 +14,7 @@ _ext_headers = glob.glob("{}/include/*".format(_ext_src_root))
 
 requirements = ["torch>=1.4"]
 
-os.environ["TORCH_CUDA_ARCH_LIST"] = "3.7+PTX;5.0;6.0;6.1;6.2;7.0;7.5"
+os.environ["TORCH_CUDA_ARCH_LIST"] = "5.0;6.0;6.1;6.2;7.0;7.5;9.0"
 
 exec(open("_version.py").read())
 
@@ -30,6 +30,7 @@ setup(
             extra_compile_args={
                 "cxx": ["-O3"],
                 "nvcc": ["-O3", "-Xfatbin", "-compress-all"],
+                # "nvcc": ["-O3", "-Xfatbin", "-compress-all", '-arch=sm_90'],
             },
             include_dirs=[osp.join(_this_dir, _ext_src_root, "include")],
         )

@@ -9,8 +9,8 @@ pipeline:
     name: caption_task
     args:
       tokenizer: bert_tokenizer
-      vocab: ./data/scanfamily/annotations/meta_data/scanrefer_vocab.pth
-      corpus: ./data/scanfamily/annotations/meta_data/scanrefer_corpus.pth
+      vocab: /ocean/projects/cis220039p/mdt2/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_vocab.pth
+      corpus: /ocean/projects/cis220039p/mdt2/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_corpus.pth
       txt_seq_length: 35
       pc_seq_length: 80
       pc_type: 'gt'

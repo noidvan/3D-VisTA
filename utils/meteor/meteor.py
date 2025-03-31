@@ -84,6 +84,6 @@ class Meteor:
 
 if __name__ == '__main__':
     x = Meteor()
-    with open("/home/zhuziyu/work/vlpr/3dVL/scan2cap_result.json", 'r') as f:
+    with open("/ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/scan2cap_result.json", 'r') as f:
         json_file = json.load(f)
         print(x.compute_score(json_file['gt_sentence_mp'], json_file['pred_sentence_mp'])[0])
