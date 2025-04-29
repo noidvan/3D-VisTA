@@ -59,6 +59,111 @@ class ScanFamilyDatasetWrapper(torch.utils.data.Dataset):
             data_dict['answer_label'] = data_dict['answer_label'].long() # N, C
         return data_dict
 
+class MaskDatasetWrapper(torch.utils.data.Dataset):
+    # def __init__(self, cfg, dataset, split="train"):
+    def __init__(self, dataset, tokenizer, max_seq_length=80, max_obj_len=80, txt_mask_ratio=0.15, pc_mask_ratio=0.1, replace_ratio=0.3):
+        # tokenizer, max_seq_length=80, max_obj_len=80,
+        #  mask_strategy='random', txt_mask_ratio=0.15, pc_mask_ratio=0.1
+        self.dataset = dataset
+        self.tokenizer = tokenizer
+        self.max_seq_length = max_seq_length
+        self.max_obj_len = max_obj_len
+        self.txt_mask_ratio = txt_mask_ratio
+        self.pc_mask_ratio = pc_mask_ratio
+        self.replace_ratio = replace_ratio
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        data_dict = self.dataset[idx]
+
+        sentence = data_dict['sentence']
+        replace_label = 0
+
+        # Decide whether to replace
+        if random.random() < self.replace_ratio:
+            # Pick a different random index
+            other_idx = random.randrange(len(self.dataset))
+            while other_idx == idx:
+                other_idx = random.randrange(len(self.dataset))
+
+            # Swap the caption and mark as “replaced”
+            sentence = self.dataset[other_idx]['sentence']
+            replace_label  = 1
+
+        data_dict['replace']  = replace_label # 0 → match, 1 → mismatch
+
+        encoded_input = self.tokenizer(sentence, max_length=self.max_seq_length,
+                          add_special_tokens=True, truncation=True,
+                          padding='max_length', return_tensors="pt")
+        # build txt
+        data_dict['txt_ids'] = encoded_input['input_ids'].squeeze(0) # L
+        data_dict['txt_masks'] = encoded_input['attention_mask'].squeeze(0) # L
+
+        # mask txt
+        masked_txt_ids, masked_lm_labels = random_word(data_dict['txt_ids'], data_dict['txt_masks'],
+                                                       self.tokenizer, self.txt_mask_ratio)
+        data_dict['txt_ids'] = masked_txt_ids
+        data_dict['masked_lm_labels'] = masked_lm_labels
+        # build object
+        data_dict['obj_masks'] = (torch.arange(self.max_obj_len) < len(data_dict['obj_locs'])) # O
+        if 'obj_fts' in data_dict.keys():
+            data_dict['obj_fts'] = pad_tensors(data_dict['obj_fts'], lens=self.max_obj_len,
+                                                    pad=1.0).float() # O, 1024, 6
+        if 'obj_pcds_masks' in data_dict.keys():
+            data_dict['obj_pcds_masks'] = pad_tensors(data_dict['obj_pcds_masks'], lens=self.max_obj_len, 
+                                                      pad=1.0).float()
+        data_dict['obj_locs']= pad_tensors(data_dict['obj_locs'], lens=self.max_obj_len,
+                                                pad=0.0).float() # O, 3
+        data_dict['obj_labels'] = pad_tensors(data_dict['obj_labels'], lens=self.max_obj_len,
+                                                   pad=-100).long() # O
+        # mask object, 0 means mask object, 1 means keep object
+        if 'obj_fts' in data_dict.keys():
+            obj_sem_masks = random_point_cloud(data_dict['obj_fts'], data_dict['obj_masks'],
+                                            self.pc_mask_ratio)
+            data_dict['obj_sem_masks'] = obj_sem_masks
+        else:
+            obj_sem_masks = []
+            for i in range(self.max_obj_len):
+                if i >= len(data_dict['obj_locs']):
+                    obj_sem_masks.append(0)
+                else:
+                    prob = random.random()
+                    if prob < self.pc_mask_ratio:
+                        obj_sem_masks.append(0)
+                    else:
+                        obj_sem_masks.append(1)
+            data_dict['obj_sem_masks'] = torch.tensor(obj_sem_masks).long()
+        if 'tgt_object_id' in data_dict.keys():
+            data_dict['tgt_object_id'] = data_dict['tgt_object_id'].long() # 1 or O
+
+        # # Scene pcds
+        # data_dict["scene_pcds"] = torch.from_numpy(data_dict["scene_pcds"]).float()
+        # key_list = [
+        #     'txt_ids', 'txt_masks', 'masked_lm_labels', 'obj_masks', 'obj_fts',
+        #     'obj_locs', 'obj_labels', 'obj_sem_masks', 'tgt_object_id'
+        # ]
+        # if 'obj_fts' not in data_dict.keys():
+        #     key_list.remove('obj_fts')
+        #     # key_list.remove('obj_sem_masks')
+        # if 'obj_pcds_masks' in data_dict.keys():
+        #     key_list.append('obj_pcds_masks')
+        # if 'scene_pcds' in data_dict.keys():
+        #     key_list.append('scene_pcds')
+        # if 'scene_txt_ids' in data_dict.keys():
+        #     key_list.append('scene_txt_ids')
+        # if 'scene_txt_masks' in data_dict.keys():
+        #     key_list.append('scene_txt_masks')
+        # data_dict = {k : v for k, v in data_dict.items() if k in key_list}
+        return data_dict
+    
+    def collate_fn(self, batch_list):
+        ret = torch.utils.data.default_collate(batch_list)
+        return ret
+
+
+
 class CaptionDatasetWrapper(torch.utils.data.Dataset):
     def __init__(self, dataset, tokenizer, vocab, corpus, max_seq_length=80, max_obj_len=80, txt_mask_ratio=0.15, split='train'):
         self.dataset = dataset

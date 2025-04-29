@@ -38,10 +38,13 @@ class LoadScannetMixin(object):
                 scans[scan_id] = {}
                 
             # load pcd data
-            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_global_alignment", '%s.pth'% scan_id))
-            points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
+            # pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_global_alignment", '%s.pth'% scan_id))
+            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id))
+            # points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
+            points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
             colors = colors / 127.5 - 1
-            pcds = np.concatenate([points, colors], 1)
+            # pcds = np.concatenate([points, colors], 1)
+            pcds = np.concatenate([points, colors, features], 1)
             # convert to gt object
             if load_inst_info:
                 obj_pcds = []

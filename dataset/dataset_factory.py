@@ -31,6 +31,13 @@ def get_referit3d_task_dataset(split='train', tokenizer=None, txt_seq_length=50,
     dataset = Referit3DDataset(split=split, max_obj_len=pc_seq_length, **args)
     return ScanFamilyDatasetWrapper(dataset=dataset, tokenizer=tokenizer, max_seq_length=txt_seq_length, max_obj_len=pc_seq_length)
 
+@registry.register_dataset("pretrain_task")
+def get_pretrain_task_dataset(split, cfg):
+    tokenizer = registry.get_language_model(cfg.args.tokenizer)()
+    dataset = ScanNetDataset(split, cfg)
+    return MaskDatasetWrapper(dataset=dataset, tokenizer=tokenizer, max_seq_length=cfg.args.txt_seq_length, max_obj_len=cfg.args.pc_seq_length, 
+                              txt_mask_ratio=cfg.args.txt_mask_ratio, pc_mask_ratio=cfg.args.pc_mask_ratio, replace_ratio=cfg.args.replace_ratio)
+
 @registry.register_dataset("scanqa")
 def get_scanqa_dataset(split='train', **args):
     dataset = ScanQADataset(split=split, **args)    

@@ -131,7 +131,88 @@ class ModelEvaluationMixin(object):
             with open('scanrefer_result.json', 'w') as fp:
                 json.dump(eval_results, fp)
         return eval_dict['target_metric']
+    def eval_pretrain(self, epoch):
+        # initialize lists that will hold weighted sums
+        eval_dict = {
+            'target_metric': [],
+            'mlm_acc': [],
+            'match_acc': [],
+            'obj_cls_raw_acc': [],
+            'obj_cls_pre_acc': [],
+            'obj_cls_post_acc': [],
+            'obj_cls_pre_acc_mask': [],
+            'obj_cls_pre_acc_unmask': [],
+            'obj_cls_post_acc_mask': [],
+            'obj_cls_post_acc_unmask': []
+        }
 
+        # denominators
+        total_tokens      = 0     # for mlm_acc
+        total_pairs       = 0     # for match_acc / target_metric
+        total_objs        = 0     # for raw / pre / post acc
+        total_mask_objs   = 0     # for *acc_mask
+        total_unmask_objs = 0     # for *acc_unmask
+
+        for data_dict in tqdm(self.test_data_loader):
+            # forward pass
+            data_dict = self.forward_one(data_dict)
+            # collect metrics
+            data_dict = self.get_metrics(data_dict)  # <- calls get_pretrain_metrics
+
+            # -------- counts for weighting --------
+            num_tokens       = (data_dict['masked_lm_labels'] != -1).sum().item()
+            num_pairs        = data_dict['scene_txt_match_logit'].size(0)
+            obj_mask         = data_dict['obj_masks'].bool()
+            num_objs         = obj_mask.sum().item()
+            sem_mask         = data_dict['obj_sem_masks'].bool()
+            num_mask_objs    = (obj_mask &  ~sem_mask).sum().item()
+            num_unmask_objs  = (obj_mask &  sem_mask).sum().item()
+
+            # accumulate denominators
+            total_tokens      += num_tokens
+            total_pairs       += num_pairs
+            total_objs        += num_objs
+            total_mask_objs   += num_mask_objs
+            total_unmask_objs += num_unmask_objs
+
+            # helper: add weighted value to list
+            def _add(key, value, weight):
+                eval_dict[key].append(float(value) * weight)
+
+            # -------- weighted sums --------
+            _add('mlm_acc',                 data_dict['mlm_acc'],                 num_tokens)
+            _add('match_acc',               data_dict['match_acc'],               num_pairs)
+            _add('target_metric',           data_dict['target_metric'],           num_pairs)
+
+            _add('obj_cls_raw_acc',         data_dict['obj_cls_raw_acc'],         num_objs)
+            _add('obj_cls_pre_acc',         data_dict['obj_cls_pre_acc'],         num_objs)
+            _add('obj_cls_post_acc',        data_dict['obj_cls_post_acc'],        num_objs)
+
+            _add('obj_cls_pre_acc_mask',    data_dict['obj_cls_pre_acc_mask'],    num_mask_objs)
+            _add('obj_cls_pre_acc_unmask',  data_dict['obj_cls_pre_acc_unmask'],  num_unmask_objs)
+            _add('obj_cls_post_acc_mask',   data_dict['obj_cls_post_acc_mask'],   num_mask_objs)
+            _add('obj_cls_post_acc_unmask', data_dict['obj_cls_post_acc_unmask'], num_unmask_objs)
+
+        # -------- final averages --------
+        def _avg(key, denom):
+            eval_dict[key] = np.sum(eval_dict[key]) / max(denom, 1e-10)
+
+        _avg('mlm_acc',                 total_tokens)
+        _avg('match_acc',               total_pairs)
+        _avg('target_metric',           total_pairs)
+
+        _avg('obj_cls_raw_acc',         total_objs)
+        _avg('obj_cls_pre_acc',         total_objs)
+        _avg('obj_cls_post_acc',        total_objs)
+
+        _avg('obj_cls_pre_acc_mask',    total_mask_objs)
+        _avg('obj_cls_pre_acc_unmask',  total_unmask_objs)
+        _avg('obj_cls_post_acc_mask',   total_mask_objs)
+        _avg('obj_cls_post_acc_unmask', total_unmask_objs)
+
+        # record & return
+        self.record_eval_step(eval_dict, epoch)
+        return eval_dict['target_metric']
     def eval_referit3d(self, epoch):
         eval_dict = {'target_metric': [], 'og_acc': [], 'og_acc_easy': [], 'og_acc_hard': [], 'og_acc_view_dep': [], 'og_acc_view_indep': [], 'txt_acc': [], 'obj_cls_raw_acc': [], 'obj_cls_pre_acc': [], 'obj_cls_post_acc': []}
          # run
@@ -387,7 +468,32 @@ class ModelLossMixin(object):
         data_dict['obj_cls_pre_loss'] = obj_cls_pre_loss
         data_dict['obj_cls_post_loss'] = obj_cls_post_loss
         return data_dict
-    
+
+    def get_pretrain_loss(self, data_dict):
+        total_loss, lm_cls_loss, match_loss, obj_cls_raw_loss, obj_cls_pre_loss, obj_cls_post_loss, obj_cls_pre_loss_mask, obj_cls_pre_loss_unmask, obj_cls_post_loss_mask, obj_cls_post_loss_unmask = self.pretrain_loss(
+            data_dict['txt_lm_cls_logits'], # txt_lm_cls_logits
+            data_dict['masked_lm_labels'], # masked_lm_labels
+            data_dict['scene_txt_match_logit'], # scene_txt_match_logits
+            data_dict['replace'], # replace
+            data_dict['obj_cls_post_logits'], # obj_cls_post_logits
+            data_dict['obj_cls_pre_logits'], # obj_cls_pre_logits
+            data_dict['obj_cls_raw_logits'], # obj_cls_raw_logits
+            data_dict['obj_labels'], # obj_labels
+            data_dict['obj_sem_masks'], # obj_sem_masks
+            data_dict['obj_masks'], # obj_masks
+        )
+        data_dict['total_loss'] = total_loss
+        data_dict['lm_cls_loss'] = lm_cls_loss
+        data_dict['match_loss'] = match_loss
+        data_dict['obj_cls_raw_loss'] = obj_cls_raw_loss
+        data_dict['obj_cls_pre_loss'] = obj_cls_pre_loss
+        data_dict['obj_cls_post_loss'] = obj_cls_post_loss
+        data_dict['obj_cls_pre_loss_mask'] = obj_cls_pre_loss_mask
+        data_dict['obj_cls_pre_loss_unmask'] = obj_cls_pre_loss_unmask
+        data_dict['obj_cls_post_loss_mask'] = obj_cls_post_loss_mask
+        data_dict['obj_cls_post_loss_unmask'] = obj_cls_post_loss_unmask
+        return data_dict
+
 class ModelMetricMixin(object):
     def get_scanrefer_metrics(self, data_dict):
         data_dict['og_acc'] = (torch.argmax(data_dict['og3d_logits'], dim=1) == data_dict['tgt_object_id'].squeeze(1)).sum().item() / float(len(data_dict['tgt_object_id']))
@@ -433,6 +539,59 @@ class ModelMetricMixin(object):
         data_dict['obj_cls_raw_acc'] = torch.sum(torch.argmax(data_dict['obj_cls_raw_logits'], dim=2)[data_dict['obj_masks']] == data_dict["obj_labels"][data_dict['obj_masks']]).item() / float(data_dict['obj_masks'].sum().item() + 1e-10)
 
         data_dict['target_metric'] = data_dict['og_acc']
+        return data_dict
+
+    def get_pretrain_metrics(self, data_dict):
+        """
+        Populate `data_dict` with evaluation metrics that align with the losses
+        returned by `get_pretrain_loss_v1`.
+        """
+
+        # -------- Masked-LM accuracy --------
+        lm_labels = data_dict['masked_lm_labels']          # [B, L]  -1 where ignored
+        lm_preds  = torch.argmax(data_dict['txt_lm_cls_logits'], dim=-1)
+        lm_mask   = lm_labels != -1                        # valid target tokens
+        if lm_mask.any():
+            data_dict['mlm_acc'] = (lm_preds[lm_mask] == lm_labels[lm_mask]
+                                ).float().mean().item()
+        else:                                              # no masked tokens in batch
+            data_dict['mlm_acc'] = 0.0
+
+        # -------- Sentence–object match accuracy --------
+        match_pred   = torch.argmax(data_dict['scene_txt_match_logit'], dim=-1)  # [B]
+        replace_lbls = data_dict['replace'].long()                                # [B]
+        data_dict['match_acc'] = (match_pred == replace_lbls).float().mean().item()
+
+        # -------- Object-classification accuracies --------
+        obj_mask      = data_dict['obj_masks'].bool()        # [B, N] – valid objects
+        obj_labels    = data_dict['obj_labels']              # [B, N]
+        sem_mask      = data_dict['obj_sem_masks'].bool()    # 1 = unmasked / visible
+
+        def _cls_acc(logits):
+            preds = torch.argmax(logits, dim=2)              # [B, N]
+            return (preds[obj_mask] == obj_labels[obj_mask]).float().mean().item()
+
+        data_dict['obj_cls_raw_acc']  = _cls_acc(data_dict['obj_cls_raw_logits'])
+        data_dict['obj_cls_pre_acc']  = _cls_acc(data_dict['obj_cls_pre_logits'])
+        data_dict['obj_cls_post_acc'] = _cls_acc(data_dict['obj_cls_post_logits'])
+
+        # --- Split pre/post accuracies into masked / unmasked subsets ----------
+        def _split_acc(logits, take_mask):
+            sel = obj_mask & take_mask
+            if sel.any():
+                preds = torch.argmax(logits, dim=2)
+                acc   = (preds[sel] == obj_labels[sel]).float().mean().item()
+                return acc
+            return 0.0
+
+        data_dict['obj_cls_pre_acc_mask']   = _split_acc(data_dict['obj_cls_pre_logits'],  ~sem_mask)
+        data_dict['obj_cls_pre_acc_unmask'] = _split_acc(data_dict['obj_cls_pre_logits'],   sem_mask)
+        data_dict['obj_cls_post_acc_mask']  = _split_acc(data_dict['obj_cls_post_logits'], ~sem_mask)
+        data_dict['obj_cls_post_acc_unmask']= _split_acc(data_dict['obj_cls_post_logits'],  sem_mask)
+
+        # -------- Target metric used for scheduler / checkpoint selection ------
+        data_dict['target_metric'] = (data_dict['match_acc'] + data_dict['mlm_acc'] + data_dict['obj_cls_post_acc']) / 3 # pick the one you care about
+
         return data_dict
 
     def get_referit3d_metrics(self, data_dict):

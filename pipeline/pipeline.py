@@ -70,6 +70,9 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             else:
                 self.train_dataset = registry.get_dataset(cfg['caption_dataset']['name'])(split='train', **cfg['caption_dataset']['args'])
                 self.test_dataset = registry.get_dataset(cfg['caption_dataset']['name'])(split='val', **cfg['caption_dataset']['args'])
+        elif self.task == 'pretrain':
+            self.train_dataset = registry.get_dataset(cfg['pretrain_dataset']['name'])('train',cfg['pretrain_dataset'])
+            self.test_dataset = registry.get_dataset(cfg['pretrain_dataset']['name'])('val', cfg['pretrain_dataset'])
         else:
             raise NotImplementedError("task " + self.task + " is not implemented")
       
@@ -113,7 +116,8 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             self.qa_loss = registry.get_optimizer(cfg["qa_loss"]['name'])
         elif self.task == 'caption':
             self.caption_loss = registry.get_optimizer(cfg['caption_loss']['name'])
-        
+        elif self.task == 'pretrain':
+            self.pretrain_loss = registry.get_optimizer(cfg['pretrain_loss']['name'])
         # restore model
         if cfg['restore_model']:
             self.restore_model()
@@ -197,6 +201,8 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             return self.eval_sqa(epoch)
         elif self.task == 'caption':
             return self.eval_caption(epoch)
+        elif self.task == 'pretrain':
+            return self.eval_pretrain(epoch)
                
     def forward_one(self, data_dict):
         # prepare data
@@ -249,6 +255,8 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             data_dict = self.get_sqa_loss(data_dict)
         elif self.task == 'caption':
             data_dict = self.get_caption_loss(data_dict)
+        elif self.task == 'pretrain':
+            data_dict = self.get_pretrain_loss(data_dict)
         return data_dict
     
     def get_metrics(self, data_dict):
@@ -262,6 +270,8 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             data_dict = self.get_sqa_metrics(data_dict)
         elif self.task == 'caption':
             data_dict = self.get_caption_metrics(data_dict)
+        elif self.task == 'pretrain':
+            data_dict = self.get_pretrain_metrics(data_dict)
         return data_dict
      
     def record_train_step(self, data_dict, step):
@@ -288,6 +298,24 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
                 # acc
                 'og_acc': data_dict['og_acc'],
                 'txt_acc': data_dict['txt_acc'],
+            })
+        elif self.task == 'pretrain':
+            log_dict.update({
+                # ---------- losses ----------
+                'lm_cls_loss'            : data_dict['lm_cls_loss'].item(),
+                'match_loss'             : data_dict['match_loss'].item(),
+                'obj_cls_pre_loss_mask'  : data_dict['obj_cls_pre_loss_mask'].item(),
+                'obj_cls_pre_loss_unmask': data_dict['obj_cls_pre_loss_unmask'].item(),
+                'obj_cls_post_loss_mask' : data_dict['obj_cls_post_loss_mask'].item(),
+                'obj_cls_post_loss_unmask': data_dict['obj_cls_post_loss_unmask'].item(),
+
+                # ---------- accuracies ----------
+                'mlm_acc'                : data_dict['mlm_acc'],
+                'match_acc'              : data_dict['match_acc'],
+                'obj_cls_pre_acc_mask'   : data_dict['obj_cls_pre_acc_mask'],
+                'obj_cls_pre_acc_unmask' : data_dict['obj_cls_pre_acc_unmask'],
+                'obj_cls_post_acc_mask'  : data_dict['obj_cls_post_acc_mask'],
+                'obj_cls_post_acc_unmask': data_dict['obj_cls_post_acc_unmask'],
             })
         elif self.task == 'scanqa':
             log_dict.update({
