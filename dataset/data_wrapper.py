@@ -108,10 +108,10 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
         data_dict['masked_lm_labels'] = masked_lm_labels
         # build object
         data_dict['obj_masks'] = (torch.arange(self.max_obj_len) < len(data_dict['obj_locs'])) # O
-        data_dict['obj_fts'] = self.pad_tensors(data_dict['obj_fts'], lens=self.max_obj_len, pad=1.0).float() # O, 1024, 6
-        data_dict['obj_locs']= self.pad_tensors(data_dict['obj_locs'], lens=self.max_obj_len, pad=0.0).float() # O, 3
-        data_dict['obj_boxes']= self.pad_tensors(data_dict['obj_boxes'], lens=self.max_obj_len, pad=0.0).float() # O, 3
-        data_dict['obj_labels'] = self.pad_tensors(data_dict['obj_labels'], lens=self.max_obj_len, pad=-100).long() # O
+        data_dict['obj_fts'] = pad_tensors(data_dict['obj_fts'], lens=self.max_obj_len, pad=1.0).float() # O, 1024, 6
+        data_dict['obj_locs']= pad_tensors(data_dict['obj_locs'], lens=self.max_obj_len, pad=0.0).float() # O, 3
+        data_dict['obj_boxes']= pad_tensors(data_dict['obj_boxes'], lens=self.max_obj_len, pad=0.0).float() # O, 3
+        data_dict['obj_labels'] = pad_tensors(data_dict['obj_labels'], lens=self.max_obj_len, pad=-100).long() # O
         # mask object, 0 means mask object, 1 means keep object
         if 'obj_fts' in data_dict.keys():
             obj_sem_masks = random_point_cloud(data_dict['obj_fts'], data_dict['obj_masks'],

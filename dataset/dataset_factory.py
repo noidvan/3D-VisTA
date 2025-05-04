@@ -36,7 +36,7 @@ def get_referit3d_task_dataset(split='train', tokenizer=None, txt_seq_length=50,
 def get_pretrain_task_dataset(split='train', tokenizer=None, txt_seq_length=50, pc_seq_length=80, **args):
     tokenizer = registry.get_language_model(tokenizer)()
     dataset = ScanScribeDataset(split=split, max_obj_len=pc_seq_length, **args)
-    return MaskDatasetWrapper(ataset=dataset, tokenizer=tokenizer, max_seq_length=txt_seq_length, max_obj_len=pc_seq_length)
+    return MaskDatasetWrapper(dataset=dataset, tokenizer=tokenizer, max_seq_length=txt_seq_length, max_obj_len=pc_seq_length)
 
 @registry.register_dataset("scanqa")
 def get_scanqa_dataset(split='train', **args):

@@ -70,7 +70,7 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
             for item in f:
                 if item['scan_id'] in split_scan_ids:
                     # Convert labels
-                    item['instance_type'] = self.int2cat[self.label_converter.id_to_scannetid[self.cat2int[item['instance_type']]]]
+                    # item['instance_type'] = self.int2cat[self.label_converter.id_to_scannetid[self.cat2int[item['instance_type']]]]
                     item['object_ids'] =  [int(item['target_id'])]
                     item['object_names'] = [item['instance_type']]
                     self.scan_ids.add(item['scan_id'])

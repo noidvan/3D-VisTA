@@ -54,8 +54,12 @@ class LoadScannetMixin(object):
                 obj_pcds = []
                 for i in range(instance_labels.max() + 1):
                     mask = instance_labels == i     # time consuming
-                    obj_pcds.append(pcds[mask])
-                scans[scan_id]['pcds'] = obj_pcds                     
+                    if mask.any():
+                        obj_pcds.append(pcds[mask])      # (k_i, 14)
+                    else:
+                        # Pad with a single zero vector so shape is (1, 14)
+                        obj_pcds.append(np.zeros((1, pcds.shape[1]), dtype=pcds.dtype))    
+                scans[scan_id]['pcds'] = obj_pcds          
                 # calculate box for matching
                 obj_center = []
                 obj_box_size = []
