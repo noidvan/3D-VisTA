@@ -38,7 +38,7 @@ class LoadScannetMixin(object):
                 scans[scan_id] = {}
                 
             # load pcd data  # CHANGE FOR FEATURES
-            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_feats", '%s.pth'% scan_id))
+            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id), weights_only=False)
             points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
 
             non_nan_inds = np.where(~np.isnan(points[:, 0]))[0]

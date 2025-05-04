@@ -70,7 +70,7 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
             for item in f:
                 if item['scan_id'] in split_scan_ids:
                     # Convert labels
-                    item['instance_type'] = self.int2cat(self.label_converter.id_to_scannetid[self.cat2int[item['instance_type']]])
+                    item['instance_type'] = self.int2cat[self.label_converter.id_to_scannetid[self.cat2int[item['instance_type']]]]
                     item['object_ids'] =  [int(item['target_id'])]
                     item['object_names'] = [item['instance_type']]
                     self.scan_ids.add(item['scan_id'])
@@ -80,18 +80,18 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         # load ScanQA
         scanqa_count = 0
         anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/qa/ScanQA_v1.0_' + split + ".json")
-        with jsonlines.open(anno_file, 'r') as f:
-            for item in f:
-                if item['scan_id'] in split_scan_ids:
-                    # Convert labels
-                    item['scan_id'] = item['scene_id']
-                    item['utterance'] = item['question']
-                    item['item_id'] = item['question_id']
-                    self.scan_ids.add(item['scan_id'])
-                    self.data.append(item)
-                    scanqa_count += 1
+        json_data = json.load(open(anno_file, 'r'))
+        for item in json_data:
+            if item['scene_id'] in split_scan_ids:
+                # Convert labels
+                item['scan_id'] = item['scene_id']
+                item['utterance'] = item['question']
+                item['item_id'] = item['question_id']
+                self.scan_ids.add(item['scan_id'])
+                self.data.append(item)
+                scanqa_count += 1
 
-        print("Loaded %d ScanRefer, %d NR3D, %d SR3D, %d ScanQA text samples. Total: %d." % (scanrefer_count, nr3d_count, sr3d_count, scanqa_count, len(self.scan_ids)))
+        print("Loaded %d ScanRefer, %d NR3D, %d SR3D, %d ScanQA text samples. Scans: %d." % (scanrefer_count, nr3d_count, sr3d_count, scanqa_count, len(self.scan_ids)))
         # fill parameters
         self.split = split
         self.max_obj_len = max_obj_len - 1
