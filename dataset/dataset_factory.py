@@ -6,6 +6,7 @@ from dataset.scanqa import *
 from dataset.scanrefer import *
 from dataset.referit3d import *
 from dataset.scan2cap import *
+from dataset.scanscribe import *
 from dataset.sqa import SQADataset
 from pipeline.registry import registry
 
@@ -32,11 +33,10 @@ def get_referit3d_task_dataset(split='train', tokenizer=None, txt_seq_length=50,
     return ScanFamilyDatasetWrapper(dataset=dataset, tokenizer=tokenizer, max_seq_length=txt_seq_length, max_obj_len=pc_seq_length)
 
 @registry.register_dataset("pretrain_task")
-def get_pretrain_task_dataset(split, cfg):
-    tokenizer = registry.get_language_model(cfg.args.tokenizer)()
-    dataset = ScanNetDataset(split, cfg)
-    return MaskDatasetWrapper(dataset=dataset, tokenizer=tokenizer, max_seq_length=cfg.args.txt_seq_length, max_obj_len=cfg.args.pc_seq_length, 
-                              txt_mask_ratio=cfg.args.txt_mask_ratio, pc_mask_ratio=cfg.args.pc_mask_ratio, replace_ratio=cfg.args.replace_ratio)
+def get_pretrain_task_dataset(split='train', tokenizer=None, txt_seq_length=50, pc_seq_length=80, **args):
+    tokenizer = registry.get_language_model(tokenizer)()
+    dataset = ScanScribeDataset(split=split, max_obj_len=pc_seq_length, **args)
+    return MaskDatasetWrapper(ataset=dataset, tokenizer=tokenizer, max_seq_length=txt_seq_length, max_obj_len=pc_seq_length)
 
 @registry.register_dataset("scanqa")
 def get_scanqa_dataset(split='train', **args):

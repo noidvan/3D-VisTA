@@ -71,8 +71,8 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
                 self.train_dataset = registry.get_dataset(cfg['caption_dataset']['name'])(split='train', **cfg['caption_dataset']['args'])
                 self.test_dataset = registry.get_dataset(cfg['caption_dataset']['name'])(split='val', **cfg['caption_dataset']['args'])
         elif self.task == 'pretrain':
-            self.train_dataset = registry.get_dataset(cfg['pretrain_dataset']['name'])('train',cfg['pretrain_dataset'])
-            self.test_dataset = registry.get_dataset(cfg['pretrain_dataset']['name'])('val', cfg['pretrain_dataset'])
+            self.train_dataset = registry.get_dataset(cfg['scanscribe_dataset']['name'])(split='train', **cfg['scanscribe_dataset']['args'])
+            self.test_dataset = registry.get_dataset(cfg['scanscribe_dataset']['name'])(split='val', **cfg['scanscribe_dataset']['args'])
         else:
             raise NotImplementedError("task " + self.task + " is not implemented")
       

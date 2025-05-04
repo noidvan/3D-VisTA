@@ -79,9 +79,9 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
         data_dict = self.dataset[idx]
 
         sentence = data_dict['sentence']
-        replace_label = 0
+        replace_label = False
 
-        # Decide whether to replace
+        # Decide whether to replace for scene text match
         if random.random() < self.replace_ratio:
             # Pick a different random index
             other_idx = random.randrange(len(self.dataset))
@@ -90,7 +90,7 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
 
             # Swap the caption and mark as “replaced”
             sentence = self.dataset[other_idx]['sentence']
-            replace_label  = 1
+            replace_label  = True
 
         data_dict['replace']  = replace_label # 0 → match, 1 → mismatch
 
@@ -108,16 +108,10 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
         data_dict['masked_lm_labels'] = masked_lm_labels
         # build object
         data_dict['obj_masks'] = (torch.arange(self.max_obj_len) < len(data_dict['obj_locs'])) # O
-        if 'obj_fts' in data_dict.keys():
-            data_dict['obj_fts'] = pad_tensors(data_dict['obj_fts'], lens=self.max_obj_len,
-                                                    pad=1.0).float() # O, 1024, 6
-        if 'obj_pcds_masks' in data_dict.keys():
-            data_dict['obj_pcds_masks'] = pad_tensors(data_dict['obj_pcds_masks'], lens=self.max_obj_len, 
-                                                      pad=1.0).float()
-        data_dict['obj_locs']= pad_tensors(data_dict['obj_locs'], lens=self.max_obj_len,
-                                                pad=0.0).float() # O, 3
-        data_dict['obj_labels'] = pad_tensors(data_dict['obj_labels'], lens=self.max_obj_len,
-                                                   pad=-100).long() # O
+        data_dict['obj_fts'] = self.pad_tensors(data_dict['obj_fts'], lens=self.max_obj_len, pad=1.0).float() # O, 1024, 6
+        data_dict['obj_locs']= self.pad_tensors(data_dict['obj_locs'], lens=self.max_obj_len, pad=0.0).float() # O, 3
+        data_dict['obj_boxes']= self.pad_tensors(data_dict['obj_boxes'], lens=self.max_obj_len, pad=0.0).float() # O, 3
+        data_dict['obj_labels'] = self.pad_tensors(data_dict['obj_labels'], lens=self.max_obj_len, pad=-100).long() # O
         # mask object, 0 means mask object, 1 means keep object
         if 'obj_fts' in data_dict.keys():
             obj_sem_masks = random_point_cloud(data_dict['obj_fts'], data_dict['obj_masks'],
@@ -135,32 +129,20 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
                     else:
                         obj_sem_masks.append(1)
             data_dict['obj_sem_masks'] = torch.tensor(obj_sem_masks).long()
-        if 'tgt_object_id' in data_dict.keys():
-            data_dict['tgt_object_id'] = data_dict['tgt_object_id'].long() # 1 or O
+        # data_dict['tgt_object_label'] = data_dict['tgt_object_label'].long() # 1 or C
+        # data_dict['tgt_object_id'] = data_dict['tgt_object_id'].long() # 1 or O
 
-        # # Scene pcds
-        # data_dict["scene_pcds"] = torch.from_numpy(data_dict["scene_pcds"]).float()
-        # key_list = [
-        #     'txt_ids', 'txt_masks', 'masked_lm_labels', 'obj_masks', 'obj_fts',
-        #     'obj_locs', 'obj_labels', 'obj_sem_masks', 'tgt_object_id'
-        # ]
-        # if 'obj_fts' not in data_dict.keys():
-        #     key_list.remove('obj_fts')
-        #     # key_list.remove('obj_sem_masks')
-        # if 'obj_pcds_masks' in data_dict.keys():
-        #     key_list.append('obj_pcds_masks')
-        # if 'scene_pcds' in data_dict.keys():
-        #     key_list.append('scene_pcds')
-        # if 'scene_txt_ids' in data_dict.keys():
-        #     key_list.append('scene_txt_ids')
-        # if 'scene_txt_masks' in data_dict.keys():
-        #     key_list.append('scene_txt_masks')
-        # data_dict = {k : v for k, v in data_dict.items() if k in key_list}
+        # if len(data_dict['tgt_object_id']) > 1: # O, pad to max objet length
+        #     data_dict['tgt_object_id'] = self.pad_tensors(data_dict['tgt_object_id'].long(), lens=self.max_obj_len, pad=0).long() # O
+        # # build target
+        # if data_dict.get('tgt_object_id_iou25') != None:
+        #     data_dict['tgt_object_id_iou25'] = self.pad_tensors(data_dict['tgt_object_id_iou25'], lens=self.max_obj_len, pad=0).long()
+        # if data_dict.get('tgt_object_id_iou50') != None:
+        #     data_dict['tgt_object_id_iou50'] = self.pad_tensors(data_dict['tgt_object_id_iou50'], lens=self.max_obj_len, pad=0).long()
+        # # build label for qa
+        # if "answer_label" in data_dict:
+        #     data_dict['answer_label'] = data_dict['answer_label'].long() # N, C
         return data_dict
-    
-    def collate_fn(self, batch_list):
-        ret = torch.utils.data.default_collate(batch_list)
-        return ret
 
 
 

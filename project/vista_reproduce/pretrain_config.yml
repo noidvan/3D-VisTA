@@ -5,7 +5,7 @@ pipeline:
   eval_task: False
   restore_model: False
 
-  pretrain_dataset:
+  scanscribe_dataset:
     name: pretrain_task
     args:
       tokenizer: bert_tokenizer
@@ -14,20 +14,6 @@ pipeline:
       anno_type: 'nr3d'
       pc_type: 'gt'
       sr3d_plus_aug: True
-      sem_type: '607'
-      filter_lang: False
-      txt_mask_ratio: 0.15
-      pc_mask_ratio: 0.1
-      replace_ratio: 0.3
-    train:
-      sources: [ 'scanrefer', 'referit3d']
-      referit3d:
-        anno_type: ['sr3d', 'nr3d']
-        sr3d_plus_aug: True
-    val:
-      sources: ['scanrefer']
-    test:
-      sources: ['scanrefer']
 
   lang_encoder:
     name: bert_lang_encoder
