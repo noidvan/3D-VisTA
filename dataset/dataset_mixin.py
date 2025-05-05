@@ -38,17 +38,20 @@ class LoadScannetMixin(object):
                 scans[scan_id] = {}
                 
             # load pcd data  # CHANGE FOR FEATURES
-            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id), weights_only=False)
-            points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
-
-            non_nan_inds = np.where(~np.isnan(points[:, 0]))[0]
-            points = points[non_nan_inds]
-            colors = colors[non_nan_inds]
-            features = features[non_nan_inds]
-            instance_labels = instance_labels[non_nan_inds]
+            # pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id), weights_only=False)
+            # points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
+            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_global_alignment", '%s.pth'% scan_id), weights_only=False)
+            points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
+            
+            # non_nan_inds = np.where(~np.isnan(points[:, 0]))[0]
+            # points = points[non_nan_inds]
+            # colors = colors[non_nan_inds]
+            # features = features[non_nan_inds]
+            # instance_labels = instance_labels[non_nan_inds]
 
             colors = colors / 127.5 - 1
-            pcds = np.concatenate([points, colors, features], 1)
+            # pcds = np.concatenate([points, colors, features], 1)
+            pcds = np.concatenate([points, colors], 1)
             # convert to gt object
             if load_inst_info:
                 obj_pcds = []

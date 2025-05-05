@@ -83,7 +83,7 @@ pipeline:
   saver:
     name: model_saver
     args:
-      save_name: pretrain.pth
+      save_name: pretrain_3d.pth
       save_dir: project/pretrain_weights
       
   batch_size: 128
