@@ -163,3 +163,4 @@ project/*/*.pth
 data
 *.out
 *.err
+wandb/

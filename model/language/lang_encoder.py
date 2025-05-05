@@ -5,7 +5,7 @@ from pipeline.registry import registry
 @registry.register_language_model("bert_tokenizer")
 def get_bert_tokenizer():
     tokenizer = BertTokenizer.from_pretrained(
-        "bert-base-uncased",
+        "google-bert/bert-base-uncased",
         do_lower_case=True)
     return tokenizer
 
@@ -17,7 +17,7 @@ def get_bert_lang_encoder(num_hidden_layer=3):
         num_attention_heads=12, type_vocab_size=2
     )
     txt_encoder = BertModel.from_pretrained(
-        'bert-base-uncased', config=txt_bert_config
+        'google-bert/bert-base-uncased', config=txt_bert_config
     )
     return txt_encoder
 
