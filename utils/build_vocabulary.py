@@ -44,7 +44,7 @@ def build_scanrefer_bert_vocabulary():
     
     anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/refer/scanrefer.jsonl')
     save_path = os.path.join(SCAN_FAMILY_BASE, 'annotations/meta_data/scanrefer_vocab.pth')
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",  do_lower_case=True)
+    tokenizer = BertTokenizer.from_pretrained("google-bert/bert-base-uncased",  do_lower_case=True)
     
     with jsonlines.open(anno_file, 'r') as f:
         for item in f:
