@@ -1,20 +1,18 @@
 pipeline:
   name: optimus_prime
 
-  task: referit3d
+  task: scanqa
   eval_task: False
   restore_model: False
 
-  refer_dataset:
-    name: referit3d_task
+  qa_dataset:
+    name: scanqa_task
     args:
       tokenizer: bert_tokenizer
       txt_seq_length: 50
       pc_seq_length: 80
-      anno_type: 'nr3d'
       pc_type: 'gt'
-      sr3d_plus_aug: True
-
+  
   lang_encoder:
     name: bert_lang_encoder
     args:
@@ -32,9 +30,6 @@ pipeline:
       num_layers: 4
       dim_loc: 6
       pairwise_rel_type: center
-      mixup_strategy: linear_decay
-      mixup_stage1: 0.2
-      mixup_stage2: 0.4
 
   unified_encoder:
     name: unified_encoder_v2
@@ -68,29 +63,32 @@ pipeline:
     args:
       hidden_size: 768
       vocab_size: 4231
-
-  refer_loss:
-    name: refer_loss_v1
+  
+  qa_loss:
+    name: qa_loss_v1
   
   logger:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
-      project: 3D-VisTA-Finetune
-      name: sr3d_nrtrain_3d_on3d_scratch_2020507
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
+      project: scanrefer
+      name: scanqa
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_nrtrain_3d_on3d_scratch_2020507.pth
+  saver:
+    name: model_saver
+    args:
+      save_name: scanqa.pth
       save_dir: project/reproduce_weights
-      
+
   batch_size: 64
   learning_rate: 1.0e-4
   grad_norm: 5.0
-  epochs: 100
-  warmup_steps: 5000
+  epochs: 30
+  warmup_steps: 2000
   lang_lr_mul: 0.1
   point_lr_mul: 1.0
   unified_lr_mul: 1.0

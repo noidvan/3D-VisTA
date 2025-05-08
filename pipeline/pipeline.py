@@ -358,17 +358,17 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
     
     def restore_model(self):
         state_dict = self.saver.restore_dict()
-        self.lang_encoder.load_state_dict(state_dict['lang_encoder'])
-        self.point_encoder.load_state_dict(state_dict['point_encoder'])
-        self.unified_encoder.load_state_dict(state_dict['unified_encoder'])
-        self.ground_head.load_state_dict(state_dict['ground_head'])
+        self.lang_encoder.load_state_dict(state_dict['lang_encoder'], strict=False)
+        self.point_encoder.load_state_dict(state_dict['point_encoder'], strict=False)
+        self.unified_encoder.load_state_dict(state_dict['unified_encoder'], strict=False)
+        self.ground_head.load_state_dict(state_dict['ground_head'], strict=False)
         try:
-            self.qa_head.load_state_dict(state_dict['qa_head'])
+            self.qa_head.load_state_dict(state_dict['qa_head'], strict=False)
         except: 
             print("fail to load qa params")
-        self.pretrain_head.load_state_dict(state_dict['pretrain_head'])
+        self.pretrain_head.load_state_dict(state_dict['pretrain_head'], strict=False)
         try:
-            self.caption_head.load_state_dict(state_dict['caption_head'])
+            self.caption_head.load_state_dict(state_dict['caption_head'], strict=False)
         except:
             print("fail to load caption params")
     

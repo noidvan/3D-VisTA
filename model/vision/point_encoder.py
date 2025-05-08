@@ -179,7 +179,11 @@ class PointTokenizeEncoder(nn.Module):
         # load weights
         self.apply(init_weights)
         if path is not None:
-            self.load_state_dict(torch.load(path), strict=False)
+            missing_keys, unexpected_keys = self.load_state_dict(torch.load(path), strict=False)
+            print('Missing point encoder weight keys:')
+            print(missing_keys)
+            print('Unexpected point encoder weight keys:')
+            print(unexpected_keys)
             print('finish load backbone')
         
     

@@ -3,7 +3,7 @@ pipeline:
 
   task: referit3d
   eval_task: False
-  restore_model: False
+  restore_model: True
 
   refer_dataset:
     name: referit3d_task
@@ -76,15 +76,17 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_nrtrain_3d_on3d_scratch_2020507
+      name: nr3d_3d_on2d
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_nrtrain_3d_on3d_scratch_2020507.pth
-      save_dir: project/reproduce_weights
+      save_name: nr3d_3d_on2d.pth
+      save_dir: project/finetune_weights
+      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
+      load_name: pretrain_3d.pth
       
   batch_size: 64
   learning_rate: 1.0e-4
