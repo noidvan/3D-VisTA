@@ -25,7 +25,7 @@ pipeline:
     args:
       backbone: pointnet++
       hidden_size: 768
-      path: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/point_encoder_weights/point_encoder_2d.pt
+      path: null
       freeze_feature: True
       num_attention_heads: 12
       spatial_dim: 5
@@ -78,12 +78,12 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA
-      name: pretrain
-
+      name: pretrain_3d_on2d
+  
   saver:
     name: model_saver
     args:
-      save_name: pretrain_3d.pth
+      save_name: pretrain_3d_on2d.pth
       save_dir: project/pretrain_weights
       
   batch_size: 128
