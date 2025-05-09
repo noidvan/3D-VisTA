@@ -94,23 +94,24 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
 
         # load ScanScribe
         scanscribe_template_count = 0
-        anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/template_gen_language.json')
-        json_data = json.load(open(anno_file, 'r'))
-        for item in json_data:
-            item['utterance'] = item['sentence']
-            # self.scan_ids.add(item['scan_id'])
-            self.data.append(item)
-            scanscribe_template_count += 1
-        
         scanscribe_gpt_count = 0
-        anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/gpt_gen_language.json')
-        json_data = json.load(open(anno_file, 'r'))
-        for i in range(15):
+        if split == 'train':
+            anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/template_gen_language.json')
+            json_data = json.load(open(anno_file, 'r'))
             for item in json_data:
                 item['utterance'] = item['sentence']
                 # self.scan_ids.add(item['scan_id'])
                 self.data.append(item)
-                scanscribe_gpt_count += 1
+                scanscribe_template_count += 1
+            
+            anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/gpt_gen_language.json')
+            json_data = json.load(open(anno_file, 'r'))
+            for i in range(15):
+                for item in json_data:
+                    item['utterance'] = item['sentence']
+                    # self.scan_ids.add(item['scan_id'])
+                    self.data.append(item)
+                    scanscribe_gpt_count += 1
 
         print("Loaded %d ScanRefer, %d NR3D, %d SR3D, %d ScanQA, %d ScanScribe template, %d ScanScribe GPT." % (scanrefer_count, nr3d_count, sr3d_count, scanqa_count, scanscribe_template_count, scanscribe_gpt_count))
         # fill parameters

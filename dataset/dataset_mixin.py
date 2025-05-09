@@ -54,8 +54,8 @@ class LoadScannetMixin(object):
             # instance_labels = instance_labels[non_nan_inds]
 
             colors = colors / 127.5 - 1
-            pcds = np.concatenate([points, colors, features], 1)
-            # pcds = np.concatenate([points, colors], 1)
+            # pcds = np.concatenate([points, colors, features], 1)
+            pcds = np.concatenate([points, colors], 1)
             # convert to gt object
             if load_inst_info:
                 obj_pcds = []
@@ -137,7 +137,7 @@ class LoadScannetMixin(object):
 
             colors = colors / 127.5 - 1
             # pcds = np.concatenate([points, colors, features], 1)
-            pcds = np.concatenate([points, colors, features], 1)
+            pcds = np.concatenate([points, colors], 1)
 
             # inst_labels = []
             # for i in range(instance_labels.max() + 1):
