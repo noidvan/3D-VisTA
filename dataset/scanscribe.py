@@ -1,5 +1,6 @@
 import collections
 import json
+from tqdm import tqdm
 import multiprocessing as mp
 import os
 import random
@@ -91,7 +92,27 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
                 self.data.append(item)
                 scanqa_count += 1
 
-        print("Loaded %d ScanRefer, %d NR3D, %d SR3D, %d ScanQA text samples. Scans: %d." % (scanrefer_count, nr3d_count, sr3d_count, scanqa_count, len(self.scan_ids)))
+        # load ScanScribe
+        scanscribe_template_count = 0
+        anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/template_gen_language.json')
+        json_data = json.load(open(anno_file, 'r'))
+        for item in json_data:
+            item['utterance'] = item['sentence']
+            # self.scan_ids.add(item['scan_id'])
+            self.data.append(item)
+            scanscribe_template_count += 1
+        
+        scanscribe_gpt_count = 0
+        anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/scanscribe/gpt_gen_language.json')
+        json_data = json.load(open(anno_file, 'r'))
+        for i in range(15):
+            for item in json_data:
+                item['utterance'] = item['sentence']
+                # self.scan_ids.add(item['scan_id'])
+                self.data.append(item)
+                scanscribe_gpt_count += 1
+
+        print("Loaded %d ScanRefer, %d NR3D, %d SR3D, %d ScanQA, %d ScanScribe template, %d ScanScribe GPT." % (scanrefer_count, nr3d_count, sr3d_count, scanqa_count, scanscribe_template_count, scanscribe_gpt_count))
         # fill parameters
         self.split = split
         self.max_obj_len = max_obj_len - 1
@@ -103,158 +124,70 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         
         # load scans
         self.scans = self.load_scannet(self.scan_ids, self.pc_type, self.split != 'test')
-        
-        # build unique multiple look up
-        # for scan_id in self.scan_ids:
-        #     #inst_labels = self.scans[scan_id]['inst_labels']
-        #     cache = {}
-        #     label_list = []
-        #     for item in self.data:
-        #         if item['scan_id'] == scan_id and item['target_id'] not in cache.keys():
-        #             cache[item['target_id']] = 1
-        #             label_list.append(self.cat2int[item['instance_type']])
-        #     self.scans[scan_id]['label_count'] = Counter(label_list)
-    
+        if self.split == 'train':
+            rscan = self.load_rscan()
+            self.scans.update(rscan)
+
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
         # load scanrefer
         item = self.data[idx]
-        item_id = item['item_id']
+        # item_id = item['item_id']
         scan_id =  item['scan_id']
         # tgt_object_id = int(item['target_id'])
         # tgt_object_name = item['instance_type']
-        tgt_object_id_list = item['object_ids']
-        tgt_object_name_list = item['object_names']
+        if 'object_ids' in item:
+            tgt_object_id_list = item['object_ids']
+            tgt_object_name_list = item['object_names']
         sentence = item['utterance']
         # is_view_dependent = is_explicitly_view_dependent(item['tokens'])
         
         # load pcds and labels
-        if self.pc_type == 'gt':
-            obj_pcds = deepcopy(self.scans[scan_id]['pcds']) # N, 6
-            obj_labels = deepcopy(self.scans[scan_id]['inst_labels']) # N
-        # elif self.pc_type == 'pred':
-        #     obj_pcds = deepcopy(self.scans[scan_id]['pcds_pred'])
-        #     obj_labels = deepcopy(self.scans[scan_id]['inst_labels_pred'])
-        #     # get obj labels by matching
-        #     gt_obj_labels = self.scans[scan_id]['inst_labels'] # N
-        #     obj_center = self.scans[scan_id]['obj_center'] 
-        #     obj_box_size = self.scans[scan_id]['obj_box_size']
-        #     obj_center_pred = self.scans[scan_id]['obj_center_pred'] 
-        #     obj_box_size_pred = self.scans[scan_id]['obj_box_size_pred']
-        #     for i in range(len(obj_center_pred)):
-        #         for j in range(len(obj_center)):
-        #             if eval_ref_one_sample(construct_bbox_corners(obj_center[j], obj_box_size[j]), construct_bbox_corners(obj_center_pred[i], obj_box_size_pred[i])) >= 0.25:
-        #                 obj_labels[i] = gt_obj_labels[j]
-        #                 break
+        obj_pcds = deepcopy(self.scans[scan_id]['pcds']) # N, 6
+        obj_labels = deepcopy(self.scans[scan_id]['inst_labels']) # N
             
-        # filter out background or language
-        if self.filter_lang:
-            if self.pc_type == 'gt':
-                selected_obj_idxs = [i for i, obj_label in enumerate(obj_labels) if (self.int2cat[obj_label] not in ['wall', 'floor', 'ceiling']) and (self.int2cat[obj_label] in sentence)]
-                # if tgt_object_id not in selected_obj_idxs:
-                #     selected_obj_idxs.append(tgt_object_id)
-                for id in tgt_object_id_list:
-                    if id not in selected_obj_idxs:
-                        selected_obj_idxs.append(id)
-            # else:
-            #     selected_obj_idxs = [i for i in range(len(obj_pcds))]
+        # filter out background
+        if isinstance(obj_pcds, list):
+            selected_obj_idxs = [i for i, obj_label in enumerate(obj_labels) if (self.int2cat[obj_label] not in ['wall', 'floor', 'ceiling'])]
+        elif isinstance(obj_pcds, dict):
+            selected_obj_idxs = [k for k, v in obj_labels if (self.int2cat[v] not in ['wall', 'floor', 'ceiling'])]
         else:
-            if self.pc_type == 'gt':
-                selected_obj_idxs = [i for i, obj_label in enumerate(obj_labels) if (self.int2cat[obj_label] not in ['wall', 'floor', 'ceiling'])]
-            # else:
-            #     selected_obj_idxs = [i for i in range(len(obj_pcds))]
+            raise ValueError("obj_pcds should be list or dict")
         obj_pcds = [obj_pcds[id] for id in selected_obj_idxs]
-        obj_labels = [obj_labels[id] for id in selected_obj_idxs] 
+        obj_labels = [obj_labels[id] for id in selected_obj_idxs]
               
         # build tgt object id and box 
-        if self.pc_type == 'gt':
-        #    tgt_object_id = selected_obj_idxs.index(tgt_object_id)
-        #    tgt_object_label = obj_labels[tgt_object_id]
-        #    tgt_object_id_iou25_list = [tgt_object_id]
-        #    tgt_object_id_iou50_list = [tgt_object_id]
-        #    assert(self.int2cat[tgt_object_label] == tgt_object_name)
-           tgt_object_id_list = [selected_obj_idxs.index(x) for x in tgt_object_id_list]
-           tgt_object_label_list = [obj_labels[x] for x in tgt_object_id_list]
-           for i in range(len(tgt_object_label_list)):
-               assert(self.int2cat[tgt_object_label_list[i]] == tgt_object_name_list[i])
-        # elif self.pc_type == 'pred':
-        #     gt_pcd = self.scans[scan_id]["pcds"][tgt_object_id]
-        #     gt_center, gt_box_size = convert_pc_to_box(gt_pcd)
-        #     tgt_object_id = -1
-        #     tgt_object_id_iou25_list = []
-        #     tgt_object_id_iou50_list = []
-        #     tgt_object_label = self.cat2int[tgt_object_name]
-        #     # find tgt iou 25
-        #     for i in range(len(obj_pcds)):
-        #         obj_center, obj_box_size = convert_pc_to_box(obj_pcds[i])
-        #         if eval_ref_one_sample(construct_bbox_corners(obj_center, obj_box_size), construct_bbox_corners(gt_center, gt_box_size)) >= 0.25:
-        #             tgt_object_id = i
-        #             tgt_object_id_iou25_list.append(i)
-        #     # find tgt iou 50
-        #     for i in range(len(obj_pcds)):
-        #         obj_center, obj_box_size = convert_pc_to_box(obj_pcds[i])
-        #         if eval_ref_one_sample(construct_bbox_corners(obj_center, obj_box_size), construct_bbox_corners(gt_center, gt_box_size)) >= 0.5:
-        #             tgt_object_id_iou50_list.append(i)
-        # assert(len(obj_pcds) == len(obj_labels))
-        
-        # crop objects 
-        # if self.max_obj_len < len(obj_labels):
-        #     # select target first
-        #     if tgt_object_id != -1:
-        #         selected_obj_idxs = [tgt_object_id]
-        #     selected_obj_idxs.extend(tgt_object_id_iou25_list)
-        #     selected_obj_idxs.extend(tgt_object_id_iou50_list)
-        #     selected_obj_idxs = list(set(selected_obj_idxs))
-        #     # select object with same semantic class with tgt_object
-        #     remained_obj_idx = []
-        #     for kobj, klabel in enumerate(obj_labels):
-        #         if kobj not in selected_obj_idxs:
-        #             if klabel == tgt_object_label:
-        #                 selected_obj_idxs.append(kobj)
-        #             else:
-        #                 remained_obj_idx.append(kobj)
-        #         if len(selected_obj_idxs) == self.max_obj_len:
-        #             break
-        #     if len(selected_obj_idxs) < self.max_obj_len:
-        #         random.shuffle(remained_obj_idx)
-        #         selected_obj_idxs += remained_obj_idx[:(self.max_obj_len - len(selected_obj_idxs))]
-        #     # reorganize ids
-        #     obj_pcds = [obj_pcds[i] for i in selected_obj_idxs]
-        #     obj_labels = [obj_labels[i] for i in selected_obj_idxs]
-        #     if tgt_object_id != -1:
-        #         tgt_object_id = selected_obj_idxs.index(tgt_object_id)
-        #     tgt_object_id_iou25_list = [selected_obj_idxs.index(id) for id in tgt_object_id_iou25_list]
-        #     tgt_object_id_iou50_list = [selected_obj_idxs.index(id) for id in tgt_object_id_iou50_list]
-        #     assert len(obj_pcds) == self.max_obj_len
-
         if self.max_obj_len < len(obj_labels):
-            selected_obj_idxs = tgt_object_id_list.copy()
-            remained_obj_idx = []
-            for kobj, klabel in enumerate(obj_labels):
-                if kobj not in  tgt_object_id_list:
-                    if klabel in tgt_object_label_list:
-                        selected_obj_idxs.append(kobj)
-                    else:
-                        remained_obj_idx.append(kobj)
-                if len(selected_obj_idxs) == self.max_obj_len:
-                    break
-            if len(selected_obj_idxs) < self.max_obj_len:
-                random.shuffle(remained_obj_idx)
-                selected_obj_idxs += remained_obj_idx[:(self.max_obj_len - len(selected_obj_idxs))]
+            if 'object_ids' in item:
+                tgt_object_id_list = [selected_obj_idxs.index(x) for x in tgt_object_id_list]
+                tgt_object_label_list = [obj_labels[x] for x in tgt_object_id_list]
+                for i in range(len(tgt_object_label_list)):
+                    assert(self.int2cat[tgt_object_label_list[i]] == tgt_object_name_list[i])
+                selected_obj_idxs = tgt_object_id_list.copy()
+                remained_obj_idx = []
+                for kobj, klabel in enumerate(obj_labels):
+                    if kobj not in  tgt_object_id_list:
+                        if klabel in tgt_object_label_list:
+                            selected_obj_idxs.append(kobj)
+                        else:
+                            remained_obj_idx.append(kobj)
+                    if len(selected_obj_idxs) == self.max_obj_len:
+                        break
+                if len(selected_obj_idxs) < self.max_obj_len:
+                    random.shuffle(remained_obj_idx)
+                    selected_obj_idxs += remained_obj_idx[:(self.max_obj_len - len(selected_obj_idxs))]
+            else:
+                # randomly select objects
+                random.shuffle(selected_obj_idxs)
+                selected_obj_idxs = selected_obj_idxs[:self.max_obj_len]
             obj_pcds = [obj_pcds[i] for i in selected_obj_idxs]
             obj_labels = [obj_labels[i] for i in selected_obj_idxs]
             tgt_object_id_list = [i for i in range(len(tgt_object_id_list))]
             assert len(obj_pcds) == self.max_obj_len
         
         # rebuild tgt_object_id
-        if len(tgt_object_id_list) == 0:
-            tgt_object_id_list.append(len(obj_pcds))
-            tgt_object_label_list.append(5)
-        if tgt_object_id_list[0] == -1:
-            tgt_object_id_list[0] = len(obj_pcds)
-            tgt_object_label_list[0] = 5
             
         # rotate obj
         rot_matrix = self.build_rotate_mat()
@@ -294,33 +227,12 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         assert obj_labels.shape[0] == obj_locs.shape[0]
         assert obj_fts.shape[0] == obj_locs.shape[0]
         
-        # # build iou25 and iou50
-        # tgt_object_id_iou25 = torch.zeros(len(obj_fts) + 1).long()
-        # tgt_object_id_iou50 = torch.zeros(len(obj_fts) + 1).long()
-        # for id in tgt_object_id_iou25_list:
-        #     tgt_object_id_iou25[id] = 1
-        # for id in tgt_object_id_iou50_list:
-        #     tgt_object_id_iou50[id] = 1
-        
-        # # build unique multiple
-        # is_multiple = self.scans[scan_id]['label_count'][tgt_object_label] > 1
-        # is_hard = self.scans[scan_id]['label_count'][tgt_object_label] > 2
-        
-        
         data_dict = {
             "sentence": sentence,
-            # "tgt_object_id": torch.LongTensor([tgt_object_id]), # 1
-            # "tgt_object_label": torch.LongTensor([tgt_object_label]), # 1
             "obj_fts": obj_fts, # N, 6
             "obj_locs": obj_locs, # N, 3
             "obj_labels": obj_labels, # N,
             "obj_boxes": obj_boxes, # N, 6 
-            "data_idx": item_id,
-            # "tgt_object_id_iou25": tgt_object_id_iou25,
-            # "tgt_object_id_iou50": tgt_object_id_iou50, 
-            # 'is_multiple': is_multiple,
-            # 'is_view_dependent': is_view_dependent,
-            # 'is_hard': is_hard,
         }
     
         return data_dict

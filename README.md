@@ -1,3 +1,51 @@
+```
+scanfamily
+├── 3rscan
+│   ├── feature_pcds_aligned_reoriented
+│   └── instance_id_to_label
+├── annotations
+│   ├── meta_data
+│   │   ├── cat2glove42b.json
+│   │   ├── scannetv2-labels.combined.tsv
+│   │   ├── scannetv2_raw_categories.json
+│   │   ├── scanrefer_corpus.pth
+│   │   └── scanrefer_vocab.pth
+│   ├── qa
+│   │   ├── ScanQA_v1.0_test_w_obj.json
+│   │   ├── ScanQA_v1.0_test_wo_obj.json
+│   │   ├── ScanQA_v1.0_train.json
+│   │   └── ScanQA_v1.0_val.json
+│   ├── refer
+│   │   ├── nr3d.jsonl
+│   │   ├── scanrefer.jsonl
+│   │   ├── sr3d+.jsonl
+│   │   └── sr3d.jsonl
+│   ├── scanscribe
+│   │   ├── gpt_gen_language.json
+│   │   ├── README.md
+│   │   └── template_gen_language.json
+│   ├── splits
+│   │   ├── scannetv2_test.txt
+│   │   ├── scannetv2_train.txt
+│   │   └── scannetv2_val.txt
+│   └── sqa_task
+│       ├── answer_dict.json
+│       └── balanced
+│           ├── v1_balanced_questions_test_scannetv2.json
+│           ├── v1_balanced_questions_train_scannetv2.json
+│           ├── v1_balanced_questions_val_scannetv2.json
+│           ├── v1_balanced_sqa_annotations_test_scannetv2.json
+│           ├── v1_balanced_sqa_annotations_train_scannetv2.json
+│           └── v1_balanced_sqa_annotations_val_scannetv2.json
+└── scan_data
+    ├── instance_id_to_gmm_color
+    ├── instance_id_to_loc
+    ├── instance_id_to_name
+    ├── pcd_with_features
+    ├── pcd_with_features_aligned
+    └── pcd_with_global_alignment
+```
+
 ## 3D-VisTA: Pre-trained Transformer for 3D Vision and Text Alignment
 
 <p align="left">

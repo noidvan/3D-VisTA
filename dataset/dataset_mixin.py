@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 from scipy import sparse
+from tqdm import tqdm
 
 from utils.eval_helper import convert_pc_to_box
 
@@ -16,9 +17,10 @@ class LoadScannetMixin(object):
     
     def load_scannet(self, scan_ids, pc_type, load_inst_info):
         scans = {}
+        missing_obj_count = 0
         # attribute
         # inst_labels, inst_locs, inst_colors, pcds, / pcds_pred, inst_labels_pred
-        for scan_id in scan_ids:
+        for scan_id in tqdm(scan_ids):
             # load inst
             if load_inst_info:
                 inst_labels = json.load(open(os.path.join(SCAN_FAMILY_BASE, 'scan_data', 'instance_id_to_name', '%s.json'%scan_id)))
@@ -38,10 +40,12 @@ class LoadScannetMixin(object):
                 scans[scan_id] = {}
                 
             # load pcd data  # CHANGE FOR FEATURES
-            # pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id), weights_only=False)
-            # points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
-            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_global_alignment", '%s.pth'% scan_id), weights_only=False)
-            points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
+            pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features_aligned", '%s.pth'% scan_id), weights_only=False)
+            points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
+            instance_labels = instance_labels.astype(int)
+
+            # pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_global_alignment", '%s.pth'% scan_id), weights_only=False)
+            # points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
             
             # non_nan_inds = np.where(~np.isnan(points[:, 0]))[0]
             # points = points[non_nan_inds]
@@ -50,8 +54,8 @@ class LoadScannetMixin(object):
             # instance_labels = instance_labels[non_nan_inds]
 
             colors = colors / 127.5 - 1
-            # pcds = np.concatenate([points, colors, features], 1)
-            pcds = np.concatenate([points, colors], 1)
+            pcds = np.concatenate([points, colors, features], 1)
+            # pcds = np.concatenate([points, colors], 1)
             # convert to gt object
             if load_inst_info:
                 obj_pcds = []
@@ -61,6 +65,7 @@ class LoadScannetMixin(object):
                         obj_pcds.append(pcds[mask])      # (k_i, 14)
                     else:
                         # Pad with a single zero vector so shape is (1, 14)
+                        missing_obj_count += 1
                         obj_pcds.append(np.zeros((1, pcds.shape[1]), dtype=pcds.dtype))    
                 scans[scan_id]['pcds'] = obj_pcds          
                 # calculate box for matching
@@ -103,9 +108,73 @@ class LoadScannetMixin(object):
                     obj_box_size_pred.append(b)
                 scans[scan_id]['obj_center_pred'] = obj_center_pred
                 scans[scan_id]['obj_box_size_pred'] = obj_box_size_pred
+        
+        print(f"missing obj count: {missing_obj_count}")
         print("finish loading scannet data")
         return scans
-            
+
+    def load_rscan(self):
+        scans = {}
+        missing_obj_count = 0
+        # attribute
+        # inst_labels, inst_locs, inst_colors, pcds, / pcds_pred, inst_labels_pred
+        folder_path = os.path.join(SCAN_FAMILY_BASE, '3rscan', 'feature_pcds_aligned_reoriented')
+        for file_name in tqdm(os.listdir(folder_path)):
+            scan_id = file_name.split('.')[0]
+            file_path = os.path.join(folder_path, file_name)
+            pcd_data = torch.load(file_path, weights_only=False)
+            points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
+            points = points.cpu().numpy()
+            instance_labels = instance_labels.astype(int)
+            inst2label_path = os.path.join(SCAN_FAMILY_BASE, '3rscan', 'instance_id_to_label', f'{file_name}')
+            inst_to_label = torch.load(inst2label_path)
+                
+            # load pcd data  # CHANGE FOR FEATURES
+            # pcd_data = torch.load(os.path.join(SCAN_FAMILY_BASE, "scan_data", "pcd_with_features", '%s.pth'% scan_id), weights_only=False)
+            # points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
+            # pcd_data = torch.load(file_path, weights_only=False)
+            # points, colors, instance_labels = pcd_data[0], pcd_data[1], pcd_data[-1]
+
+            colors = colors / 127.5 - 1
+            # pcds = np.concatenate([points, colors, features], 1)
+            pcds = np.concatenate([points, colors, features], 1)
+
+            # inst_labels = []
+            # for i in range(instance_labels.max() + 1):
+            #     if i in inst_to_label.keys():
+            #         inst_labels.append(self.cat2int[inst_to_label[i]])
+            #     else:
+            #         inst_labels.append(-100)
+            #         # tqdm.write(f"Warning: {i} not in inst_to_label")
+
+            scans[scan_id] = {
+                'inst_labels': {k:self.cat2int[v] for k, v in inst_to_label}, # (n_obj, )
+            }
+
+            # convert to gt object
+            obj_pcds = {}
+            for i in set(instance_labels):
+                mask = instance_labels == i     # time consuming
+                if mask.any():
+                    obj_pcds[i] = pcds[mask]      # (k_i, 14)
+                else:
+                    # Pad with a single zero vector so shape is (1, 14)
+                    missing_obj_count += 1
+                    obj_pcds[i] = np.zeros((1, pcds.shape[1]), dtype=pcds.dtype)  
+            scans[scan_id]['pcds'] = obj_pcds          
+            # calculate box for matching
+            # obj_center = []
+            # obj_box_size = []
+            # for i in range(len(obj_pcds)):
+            #     c, b = convert_pc_to_box(obj_pcds[i])
+            #     obj_center.append(c)
+            #     obj_box_size.append(b)
+            # scans[scan_id]['obj_center'] = obj_center
+            # scans[scan_id]['obj_box_size'] = obj_box_size
+ 
+        print(f"missing obj count: {missing_obj_count}")
+        print("finish loading 3rscan data")
+        return scans
 class DataAugmentationMixin(object):
     def __init__(self):
         pass
