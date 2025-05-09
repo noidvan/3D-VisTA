@@ -73,15 +73,12 @@ pipeline:
     name: pretrain_loss_v1
   
   logger:
-    # name: wandb_logger
-    # args:
-    #   entity: noidvan-university-of-toronto
-    #   log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
-    #   project: 3D-VisTA
-    #   name: pretrain
-    name: tensorboard_logger
+    name: wandb_logger
     args:
+      entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      project: 3D-VisTA
+      name: pretrain
 
   saver:
     name: model_saver

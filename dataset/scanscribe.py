@@ -152,7 +152,7 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         if isinstance(obj_pcds, list):
             selected_obj_idxs = [i for i, obj_label in enumerate(obj_labels) if (self.int2cat[obj_label] not in ['wall', 'floor', 'ceiling'])]
         elif isinstance(obj_pcds, dict):
-            selected_obj_idxs = [k for k, v in obj_labels if (self.int2cat[v] not in ['wall', 'floor', 'ceiling'])]
+            selected_obj_idxs = [k for k, v in obj_labels.items() if (self.int2cat[v] not in ['wall', 'floor', 'ceiling'])]
         else:
             raise ValueError("obj_pcds should be list or dict")
         obj_pcds = [obj_pcds[id] for id in selected_obj_idxs]
@@ -180,11 +180,11 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
                     selected_obj_idxs += remained_obj_idx[:(self.max_obj_len - len(selected_obj_idxs))]
             else:
                 # randomly select objects
+                selected_obj_idxs = list(range(len(selected_obj_idxs)))
                 random.shuffle(selected_obj_idxs)
                 selected_obj_idxs = selected_obj_idxs[:self.max_obj_len]
             obj_pcds = [obj_pcds[i] for i in selected_obj_idxs]
             obj_labels = [obj_labels[i] for i in selected_obj_idxs]
-            tgt_object_id_list = [i for i in range(len(tgt_object_id_list))]
             assert len(obj_pcds) == self.max_obj_len
         
         # rebuild tgt_object_id

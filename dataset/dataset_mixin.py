@@ -148,7 +148,7 @@ class LoadScannetMixin(object):
             #         # tqdm.write(f"Warning: {i} not in inst_to_label")
 
             scans[scan_id] = {
-                'inst_labels': {k:self.cat2int[v] for k, v in inst_to_label}, # (n_obj, )
+                'inst_labels': {k:self.cat2int[v] for k, v in inst_to_label.items()}, # (n_obj, )
             }
 
             # convert to gt object

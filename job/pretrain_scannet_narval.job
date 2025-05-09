@@ -13,4 +13,5 @@ source /home/noidvan/projects/def-hugh/noidvan/venvs/3dvista/bin/activate
 
 cd /home/noidvan/projects/def-hugh/noidvan/3D-VisTA
 export WANDB_MODE=offline
+export HF_HUB_OFFLINE=1
 python3 run.py --config project/vista_reproduce/pretrain_config.yml
