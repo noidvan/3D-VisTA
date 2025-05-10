@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH -p GPU-shared
+#SBATCH --gres=gpu:h100-80:1
+#SBATCH -t 12:00:00
+#SBATCH --job-name pretrain_2d_feats_encoder
+#SBATCH -o pretrain_2d_feats_encoder_%j.out
+#SBATCH -e pretrain_2d_feats_encoder_%j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=i.lin@mail.utoronto.ca
+
+IMAGE_PATH=/ocean/projects/cis220039p/mdt2/ylin23/singularity/noeticcuda12.sif
+
+# echo commands to stdout
+set -x
+
+EXE=/bin/bash
+
+WORKING_DIR=/ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/job
+
+cd $WORKING_DIR
+
+singularity exec \
+        --nv $IMAGE_PATH \
+        $EXE \
+        $WORKING_DIR/pretrain_3d_on2d_unfreeze_psc.sh

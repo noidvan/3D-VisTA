@@ -24,7 +24,7 @@ pipeline:
     args:
       backbone: pointnet++
       hidden_size: 768
-      path: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/point_encoder_weights/point_encoder_2d.pt
+      path: /ocean/projects/cis220039p/mdt2/datasets/3DVista/3dvista_checkpoints/pointnet_encoder/point_encoder_2d.pt
       freeze_feature: True
       num_attention_heads: 12
       spatial_dim: 5
@@ -35,8 +35,15 @@ pipeline:
       mixup_stage1: 0.2
       mixup_stage2: 0.8
 
+  feature_encoder:
+    name: feature_encoder
+    args:
+      backbone: pointnet++
+      path: null
+      freeze_feature: False
+
   unified_encoder:
-    name: unified_encoder_v2
+    name: unified_encoder_feats
     args:
       hidden_size: 768
       num_attention_heads: 12
@@ -75,14 +82,14 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_2d_scratch_20250509
+      name: sr3d_2d_feat_encoder_20250510
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_2d_scratch_20250509.pth
+      save_name: sr3d_2d_feat_encoder_20250510.pth
       save_dir: project/reproduce_weights
 
   batch_size: 64

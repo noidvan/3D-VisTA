@@ -39,6 +39,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         # build model
         self.lang_encoder = registry.get_language_model(cfg['lang_encoder']['name'])(**cfg['lang_encoder']['args']).cuda()
         self.point_encoder = registry.get_vision_model(cfg['point_encoder']['name'])(**cfg['point_encoder']['args']).cuda()
+        self.feature_encoder = registry.get_vision_model(cfg['feature_encoder']['name'])(**cfg['feature_encoder']['args']).cuda()
         self.unified_encoder = registry.get_vision_model(cfg['unified_encoder']['name'])(**cfg['unified_encoder']['args']).cuda()
         self.ground_head = registry.get_other_model(cfg['ground_head']['name'])(**cfg['ground_head']['args']).cuda()
         self.qa_head = registry.get_other_model(cfg['qa_head']['name'])(**cfg['qa_head']['args']).cuda()
@@ -90,6 +91,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         optimizer_grouped_parameters = []
         optimizer_grouped_parameters += self.no_decay_param_group(self.lang_encoder.named_parameters(), self.learning_rate * cfg['lang_lr_mul'])
         optimizer_grouped_parameters += self.no_decay_param_group(self.point_encoder.named_parameters(), self.learning_rate * cfg['point_lr_mul'])
+        optimizer_grouped_parameters += self.no_decay_param_group(self.feature_encoder.named_parameters(), self.learning_rate * cfg['point_lr_mul'])
         optimizer_grouped_parameters += self.no_decay_param_group(self.unified_encoder.named_parameters(), self.learning_rate * cfg['unified_lr_mul'])
         optimizer_grouped_parameters += self.no_decay_param_group(self.ground_head.named_parameters(), self.learning_rate)
         optimizer_grouped_parameters += self.no_decay_param_group(self.qa_head.named_parameters(), self.learning_rate)
@@ -221,12 +223,13 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             lang_basic_features = self.lang_encoder(data_dict['txt_ids'], data_dict['txt_masks']).last_hidden_state
         point_basic_features, point_features_pre, obj_cls_raw_logits = self.point_encoder(data_dict['obj_fts'].float(), data_dict['obj_locs'], data_dict['obj_masks'], data_dict['obj_sem_masks'], 
                                                                                           data_dict['obj_labels'], data_dict['cur_step'], data_dict['total_steps'])
-        
+        radio_fts = torch.cat((data_dict['obj_fts'][:, :, :, :3], data_dict['obj_fts'][:, :, :, 6:]), dim=-1)
+        radio_features  = self.feature_encoder(radio_fts.float())
         # unifed language entity transformer
         if self.task == 'caption':
             language_fuse_feature, point_fuse_feature  = self.unified_encoder(lang_basic_features, data_dict['txt_masks'], point_basic_features, data_dict['obj_locs'], data_dict['obj_masks'], data_dict['tgt_object_id'], True)
         else:
-            language_fuse_feature, point_fuse_feature  = self.unified_encoder(lang_basic_features, data_dict['txt_masks'], point_basic_features, data_dict['obj_locs'], data_dict['obj_masks'])
+            language_fuse_feature, point_fuse_feature  = self.unified_encoder(lang_basic_features, data_dict['txt_masks'], point_basic_features, data_dict['obj_locs'], data_dict['obj_masks'], radio_features)
         
         # task head
         txt_cls_logits, obj_cls_post_logits, obj_cls_pre_logits, og3d_logits = self.ground_head(language_fuse_feature, point_fuse_feature, point_features_pre, data_dict['obj_masks'])
@@ -360,6 +363,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         state_dict = self.saver.restore_dict()
         self.lang_encoder.load_state_dict(state_dict['lang_encoder'], strict=False)
         self.point_encoder.load_state_dict(state_dict['point_encoder'], strict=False)
+        self.feature_encoder.load_state_dict(state_dict['feature_encoder'], strict=False)
         self.unified_encoder.load_state_dict(state_dict['unified_encoder'], strict=False)
         self.ground_head.load_state_dict(state_dict['ground_head'], strict=False)
         try:
@@ -375,6 +379,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
     def save_model(self):
         self.saver.save_dict({'lang_encoder': self.lang_encoder.state_dict(),
                               'point_encoder': self.point_encoder.state_dict(),
+                              'feature_encoder': self.feature_encoder.state_dict(),
                               'unified_encoder': self.unified_encoder.state_dict(),
                               'ground_head': self.ground_head.state_dict(),
                               'qa_head': self.qa_head.state_dict(),
@@ -387,6 +392,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         if state == 'train':
             self.lang_encoder.train()
             self.point_encoder.train()
+            self.feature_encoder.train()
             self.unified_encoder.train()
             self.ground_head.train()
             self.qa_head.train()
@@ -395,6 +401,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         else:
             self.lang_encoder.eval()
             self.point_encoder.eval()
+            self.feature_encoder.eval()
             self.unified_encoder.eval()
             self.ground_head.eval()
             self.qa_head.eval()
