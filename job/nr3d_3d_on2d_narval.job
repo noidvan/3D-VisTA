@@ -13,4 +13,5 @@ source /home/noidvan/projects/def-hugh/noidvan/venvs/3dvista/bin/activate
 
 cd /home/noidvan/projects/def-hugh/noidvan/3d_3dvista/3D-VisTA
 export WANDB_MODE=offline
-python3 run.py --config project/finetune/sr3d_config.yml
+export HF_HUB_OFFLINE=1
+python3 run.py --config project/finetune/nr3d_config.yml

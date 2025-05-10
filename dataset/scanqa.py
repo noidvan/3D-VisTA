@@ -56,7 +56,7 @@ class ScanQADataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         anno_file = os.path.join(SCAN_FAMILY_BASE, 'annotations/qa/ScanQA_v1.0_' + split + ".json")
         self.scan_ids = set() # scan ids in data
         self.data = []   # data
-        c
+        json_data = json.load(open(anno_file, 'r'))
         for item in json_data:
             if use_unanswer or (len(set(item['answers']) & set(answer_cands)) > 0):
                 if split == 'train' and drop_sample > 0:

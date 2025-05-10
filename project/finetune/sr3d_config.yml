@@ -77,15 +77,15 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_3d_on3d_freeze_20250506
+      name: sr3d_3d_fuse_20250509
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_3d_on3d_freeze_20250506.pth
+      save_name: sr3d_3d_fuse_20250509.pth
       save_dir: project/finetune_weights
-      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
-      load_name: pretrain_3d.pth
+      load_dir: /home/noidvan
+      load_name: pretrain.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

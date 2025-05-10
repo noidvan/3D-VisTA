@@ -24,7 +24,7 @@ pipeline:
     args:
       backbone: pointnet++
       hidden_size: 768
-      path: /home/noidvan/projects/def-hugh/noidvan/logs/exp3d_vista/ckpts/model_epoch_95.pt
+      path: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/point_encoder_weights/point_encoder_2d.pt
       freeze_feature: True
       num_attention_heads: 12
       spatial_dim: 5
@@ -77,12 +77,12 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_pointnet60_3d_on3d_scratch_20250508
+      name: sr3d_2d_scratch_20250509
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_pointnet60_3d_on3d_scratch_20250508.pth
+      save_name: sr3d_2d_scratch_20250509.pth
       save_dir: project/reproduce_weights
 
   batch_size: 64

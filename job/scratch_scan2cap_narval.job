@@ -5,7 +5,7 @@
 #SBATCH --mem=50G
 #SBATCH --mail-user=i.lin@mail.utoronto.ca
 #SBATCH --mail-type=ALL
-
+#
 module load cuda
 module load python/3.11
 module load scipy-stack
@@ -14,4 +14,4 @@ source /home/noidvan/projects/def-hugh/noidvan/venvs/3dvista/bin/activate
 cd /home/noidvan/projects/def-hugh/noidvan/3D-VisTA
 export WANDB_MODE=offline
 export HF_HUB_OFFLINE=1
-python3 run.py --config project/finetune/sr3d_config.yml
+python3 run.py --config project/vista_reproduce/scan2cap_config.yml
