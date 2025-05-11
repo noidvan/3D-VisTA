@@ -237,55 +237,6 @@ class PointTokenizeEncoder(nn.Module):
         
         return obj_embeds, obj_embeds_pre, obj_sem_cls
 
-@registry.register_vision_model("pointnet_point_encoder")
-class PcdObjEncoder(nn.Module):
-    def __init__(self, path=None, freeze=False):
-        super().__init__()
-
-        self.pcd_net = PointNetPP(
-            sa_n_points=[32, 16, None],
-            sa_n_samples=[32, 32, None],
-            sa_radii=[0.2, 0.4, None],
-            # sa_mlps=[[3, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
-            sa_mlps=[[11, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
-        )
-        
-        self.obj3d_clf_pre_head = get_mlp_head(768, 768, 607, dropout=0.3)
-        
-        self.dropout = nn.Dropout(0.1)
-        
-        if path is not None:
-            state_dict = torch.load(path)
-            d1= [(key.removeprefix("obj_encoder."), val) for key, val in state_dict.items() if key.startswith("obj_encoder")]
-            d2 = [(key, val) for key, val in state_dict.items() if key.startswith("obj3d_clf_pre_head")]
-            self.load_state_dict(dict(d1 + d2))
-        
-        self.freeze = freeze
-        if freeze:
-            for p in self.parameters():
-                p.requires_grad = False
-    
-    def freeze_bn(self, m):
-        '''Freeze BatchNorm Layers'''
-        for layer in m.modules():
-            if isinstance(layer, nn.BatchNorm2d):
-                layer.eval()
-                
-    def forward(self, obj_pcds, obj_locs, obj_masks, obj_sem_masks):
-        if self.freeze:
-            self.freeze_bn(self.pcd_net)
-            
-        batch_size, num_objs, _, _ = obj_pcds.size()
-        obj_embeds = self.pcd_net(einops.rearrange(obj_pcds, 'b o p d -> (b o) p d') )
-        obj_embeds = einops.rearrange(obj_embeds, '(b o) d -> b o d', b=batch_size)
-        obj_embeds = self.dropout(obj_embeds)
-        # freeze
-        if self.freeze:
-            obj_embeds = obj_embeds.detach()
-        # sem logits
-        obj_sem_cls = self.obj3d_clf_pre_head(obj_embeds)
-        return obj_embeds, obj_embeds, obj_sem_cls
-
 @registry.register_vision_model("feature_encoder")
 class FeatureEncoder(nn.Module):
     def __init__(self, backbone='pointnet++', path=None, freeze_feature=False):
@@ -309,6 +260,8 @@ class FeatureEncoder(nn.Module):
         if freeze_feature:
             for p in self.parameters():
                 p.requires_grad = False
+
+        self.sem_mask_embeddings = nn.Embedding(1, 768)
         
         # load weights
         self.apply(init_weights)
@@ -326,7 +279,7 @@ class FeatureEncoder(nn.Module):
             if isinstance(layer, nn.BatchNorm2d):
                 layer.eval()
     
-    def forward(self, obj_pcds):
+    def forward(self, obj_pcds, obj_sem_masks):
         if self.freeze_feature:
             self.freeze_bn(self.point_feature_extractor)
         
@@ -338,7 +291,11 @@ class FeatureEncoder(nn.Module):
         obj_embeds = self.dropout(obj_embeds)
         if self.freeze_feature:
             obj_embeds = obj_embeds.detach()
-        
+
+        obj_embeds = obj_embeds.masked_fill(obj_sem_masks.unsqueeze(2).logical_not(), 0.0)
+        obj_sem_mask_embeds = self.sem_mask_embeddings(torch.zeros((batch_size, num_objs)).long().cuda()) * obj_sem_masks.logical_not().unsqueeze(2)
+        obj_embeds = obj_embeds + obj_sem_mask_embeds
+
         return obj_embeds
     
 if __name__ == '__main__':

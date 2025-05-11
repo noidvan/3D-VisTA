@@ -224,7 +224,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
         point_basic_features, point_features_pre, obj_cls_raw_logits = self.point_encoder(data_dict['obj_fts'].float(), data_dict['obj_locs'], data_dict['obj_masks'], data_dict['obj_sem_masks'], 
                                                                                           data_dict['obj_labels'], data_dict['cur_step'], data_dict['total_steps'])
         radio_fts = torch.cat((data_dict['obj_fts'][:, :, :, :3], data_dict['obj_fts'][:, :, :, 6:]), dim=-1)
-        radio_features  = self.feature_encoder(radio_fts.float())
+        radio_features  = self.feature_encoder(radio_fts.float(), data_dict['obj_sem_masks'])
         # unifed language entity transformer
         if self.task == 'caption':
             language_fuse_feature, point_fuse_feature  = self.unified_encoder(lang_basic_features, data_dict['txt_masks'], point_basic_features, data_dict['obj_locs'], data_dict['obj_masks'], data_dict['tgt_object_id'], True)
