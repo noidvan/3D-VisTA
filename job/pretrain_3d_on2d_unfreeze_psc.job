@@ -3,7 +3,7 @@
 #SBATCH -n 8
 #SBATCH -p GPU-shared
 #SBATCH --gres=gpu:h100-80:1
-#SBATCH -t 12:00:00
+#SBATCH -t 30:00:00
 #SBATCH --job-name pretrain_2d_feats_encoder
 #SBATCH -o pretrain_2d_feats_encoder_%j.out
 #SBATCH -e pretrain_2d_feats_encoder_%j.err

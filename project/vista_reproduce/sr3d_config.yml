@@ -84,18 +84,18 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_2d_feat_encoder_20250510
+      name: sr3d_2d_feat_encoder_20250511
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_2d_feat_encoder_20250510.pth
+      save_name: sr3d_2d_feat_encoder_20250511.pth
       save_dir: project/reproduce_weights
 
   batch_size: 64
   learning_rate: 1.0e-4
   grad_norm: 3.0
-  epochs: 50
+  epochs: 150
   warmup_steps: 5000
   lang_lr_mul: 0.1
   point_lr_mul: 1.0
