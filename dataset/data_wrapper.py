@@ -90,7 +90,7 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
                 other_idx = random.randrange(len(self.dataset))
                 while other_idx == idx:
                     other_idx = random.randrange(len(self.dataset))
-                data_dict['sentence'] = self.dataset[other_idx]['sentence']
+                sentence = self.dataset[other_idx]['sentence']
             else:
                 # --- scene swap ---
                 other_idx = random.randrange(len(self.dataset))
