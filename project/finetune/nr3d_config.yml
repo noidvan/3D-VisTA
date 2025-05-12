@@ -76,17 +76,17 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
+      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA-Finetune
-      name: nr3d_3d_on2d
+      name: nr3d_2d_finetune_20250510
   
   saver:
     name: model_saver
     args:
-      save_name: nr3d_3d_on2d.pth
+      save_name: nr3d_2d_finetune_20250510.pth
       save_dir: project/finetune_weights
       load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
-      load_name: pretrain_3d.pth
+      load_name: pretrain_2d_3r.pth
       
   batch_size: 64
   learning_rate: 1.0e-4

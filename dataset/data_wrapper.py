@@ -76,21 +76,29 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        data_dict = self.dataset[idx]
+        data_dict = self.dataset[idx].copy()
 
         sentence = data_dict['sentence']
         replace_label = False
 
         # Decide whether to replace for scene text match
-        if random.random() < self.replace_ratio:
-            # Pick a different random index
-            other_idx = random.randrange(len(self.dataset))
-            while other_idx == idx:
+        if random.random() < self.replace_ratio:   # 30 % negatives
+            replace_label = True
+            # Decide *which* side to replace (50 : 50)
+            if random.random() < 0.5:
+                # --- text swap ---
                 other_idx = random.randrange(len(self.dataset))
-
-            # Swap the caption and mark as “replaced”
-            sentence = self.dataset[other_idx]['sentence']
-            replace_label  = True
+                while other_idx == idx:
+                    other_idx = random.randrange(len(self.dataset))
+                data_dict['sentence'] = self.dataset[other_idx]['sentence']
+            else:
+                # --- scene swap ---
+                other_idx = random.randrange(len(self.dataset))
+                while other_idx == idx:
+                    other_idx = random.randrange(len(self.dataset))
+                # copy all scene‐related fields
+                for key in ('obj_locs', 'obj_fts', 'obj_boxes', 'obj_labels'):
+                    data_dict[key] = self.dataset[other_idx][key]
 
         data_dict['replace']  = replace_label # 0 → match, 1 → mismatch
 
@@ -129,19 +137,6 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
                     else:
                         obj_sem_masks.append(1)
             data_dict['obj_sem_masks'] = torch.tensor(obj_sem_masks).long()
-        # data_dict['tgt_object_label'] = data_dict['tgt_object_label'].long() # 1 or C
-        # data_dict['tgt_object_id'] = data_dict['tgt_object_id'].long() # 1 or O
-
-        # if len(data_dict['tgt_object_id']) > 1: # O, pad to max objet length
-        #     data_dict['tgt_object_id'] = self.pad_tensors(data_dict['tgt_object_id'].long(), lens=self.max_obj_len, pad=0).long() # O
-        # # build target
-        # if data_dict.get('tgt_object_id_iou25') != None:
-        #     data_dict['tgt_object_id_iou25'] = self.pad_tensors(data_dict['tgt_object_id_iou25'], lens=self.max_obj_len, pad=0).long()
-        # if data_dict.get('tgt_object_id_iou50') != None:
-        #     data_dict['tgt_object_id_iou50'] = self.pad_tensors(data_dict['tgt_object_id_iou50'], lens=self.max_obj_len, pad=0).long()
-        # # build label for qa
-        # if "answer_label" in data_dict:
-        #     data_dict['answer_label'] = data_dict['answer_label'].long() # N, C
         return data_dict
 
 

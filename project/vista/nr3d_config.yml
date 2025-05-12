@@ -12,7 +12,7 @@ pipeline:
       txt_seq_length: 50
       pc_seq_length: 80
       anno_type: 'nr3d'
-      pc_type: 'gt'
+      pc_type: 'pred'
       sr3d_plus_aug: True
 
   lang_encoder:
@@ -82,7 +82,7 @@ pipeline:
     args:
       save_name: model.pth
       load_dir: project/pretrain_weights
-      load_name: nr3d.pth
+      load_name: pretrain_2d_3r.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

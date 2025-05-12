@@ -32,9 +32,6 @@ pipeline:
       num_layers: 4
       dim_loc: 6
       pairwise_rel_type: center
-      mixup_strategy: linear_decay
-      mixup_stage1: 0.2
-      mixup_stage2: 0.4
 
   unified_encoder:
     name: unified_encoder_v2
@@ -78,12 +75,12 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA
-      name: pretrain_2d_3r
+      name: pretrain_2d_3r_replace_nomix
   
   saver:
     name: model_saver
     args:
-      save_name: pretrain_2d_3r.pth
+      save_name: pretrain_2d_3r_replace_nomix.pth
       save_dir: project/pretrain_weights
       
   batch_size: 128

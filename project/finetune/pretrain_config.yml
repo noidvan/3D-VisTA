@@ -91,7 +91,7 @@ pipeline:
   grad_norm: 5.0
   epochs: 30
   warmup_steps: 3000
-  lang_lr_mul: 0.1
+  lang_lr_mul: 1.0
   point_lr_mul: 1.0
   unified_lr_mul: 1.0
   beta1: 0.9

@@ -79,8 +79,8 @@ pipeline:
     name: model_saver
     args:
       save_name: model.pth
-      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/reproduce_weights
-      load_name: scanrefer_2d_scratch_20250509.pth
+      load_dir: project/pretrain_weights
+      load_name: pretrain_2d_3r.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

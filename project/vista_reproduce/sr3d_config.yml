@@ -77,12 +77,12 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_2d_scratch_20250509
+      name: sr3d_2d_postspace_scratch_20250510
   
   saver:
     name: model_saver
     args:
-      save_name: sr3d_2d_scratch_20250509.pth
+      save_name: sr3d_2d_postspace_scratch_20250510.pth
       save_dir: project/reproduce_weights
 
   batch_size: 64

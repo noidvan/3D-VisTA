@@ -11,7 +11,7 @@ pipeline:
       tokenizer: bert_tokenizer
       txt_seq_length: 70
       pc_seq_length: 40
-      pc_type: 'gt'
+      pc_type: 'pred'
 
   lang_encoder:
     name: bert_lang_encoder
@@ -76,8 +76,8 @@ pipeline:
     name: model_saver
     args:
       save_name: model.pth
-      load_dir: project/pretrain_weights
-      load_name: sqa.pth
+      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/reproduce_weights
+      load_name: sqa_2d_finetune_20250510.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

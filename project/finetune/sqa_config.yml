@@ -3,7 +3,7 @@ pipeline:
 
   task: sqa
   eval_task: False
-  restore_model: False
+  restore_model: True
 
   qa_dataset:
     name: sqa_task
@@ -71,15 +71,17 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
-      project: scanrefer
-      name: sqa
+      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      project: 3D-VisTA-Finetune
+      name: sqa_2d_finetune_20250510
   
   saver:
     name: model_saver
     args:
-      save_name: sqa.pth
+      save_name: sqa_2d_finetune_20250510.pth
       save_dir: project/reproduce_weights
+      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
+      load_name: pretrain_2d_3r.pth
 
   batch_size: 64
   learning_rate: 1.0e-4
