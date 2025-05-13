@@ -29,9 +29,9 @@ class GroundHeadV1(nn.Module):
     def forward(self, txt_embeds, obj_embeds, obj_pre_embeds, obj_masks):
         og3d_logits = self.og3d_head(obj_embeds).squeeze(2)
         og3d_logits = og3d_logits.masked_fill_(obj_masks.logical_not(), -float('inf'))
-        txt_embeds = txt_embeds.detach()
-        obj_embeds = obj_embeds.detach()
-        obj_pre_embeds = obj_pre_embeds.detach()
+        # txt_embeds = txt_embeds.detach()
+        # obj_embeds = obj_embeds.detach()
+        # obj_pre_embeds = obj_pre_embeds.detach()
         txt_cls_logits = self.txt_clf_head(txt_embeds[:, 0])
         obj_cls_logits = self.obj3d_clf_head(obj_embeds)
         obj_cls_pre_logits = self.obj3d_clf_pre_head(obj_pre_embeds)

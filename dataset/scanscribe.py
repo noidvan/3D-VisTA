@@ -229,6 +229,7 @@ class ScanScribeDataset(Dataset, LoadScannetMixin, DataAugmentationMixin):
         assert obj_fts.shape[0] == obj_locs.shape[0]
         
         data_dict = {
+            "scan_id": scan_id,
             "sentence": sentence,
             "obj_fts": obj_fts, # N, 6
             "obj_locs": obj_locs, # N, 3

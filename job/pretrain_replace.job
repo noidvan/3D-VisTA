@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#SBATCH -N 1
+#SBATCH -n 8
+#SBATCH -p ROBO
+#SBATCH --gres=gpu:h100:1
+#SBATCH -t 30:00:00
+#SBATCH --job-name pretrain_replace
+#SBATCH -o pretrain_replace_%j.out
+#SBATCH -e pretrain_replace_%j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=i.lin@mail.utoronto.ca
+
+IMAGE_PATH=/ocean/projects/cis220039p/mdt2/ylin23/singularity/noeticcuda12.sif
+
+# echo commands to stdout
+set -x
+
+EXE=/bin/bash
+
+WORKING_DIR=/ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/job
+
+
+cd $WORKING_DIR
+
+singularity exec \
+        --nv $IMAGE_PATH \
+        $EXE \
+        $WORKING_DIR/pretrain_replace.sh

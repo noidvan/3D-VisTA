@@ -148,7 +148,7 @@ class OptimusPrimePipeline(Pipeline, NormalDataloaderMixin, ModelOptimizationMix
             # train
             self.train(epoch)
             # eval
-            if self.task != 'caption':
+            if self.task != 'caption' and self.task != 'pretrain':
                 target_metric = self.eval(epoch)
                 if target_metric > best_target_metric:
                     best_target_metric = target_metric

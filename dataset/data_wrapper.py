@@ -88,16 +88,16 @@ class MaskDatasetWrapper(torch.utils.data.Dataset):
             if random.random() < 0.5:
                 # --- text swap ---
                 other_idx = random.randrange(len(self.dataset))
-                while other_idx == idx:
+                while other_idx == idx or self.dataset[other_idx]['scan_id'] == data_dict['scan_id']:
                     other_idx = random.randrange(len(self.dataset))
-                data_dict['sentence'] = self.dataset[other_idx]['sentence']
+                sentence = self.dataset[other_idx]['sentence']
             else:
                 # --- scene swap ---
                 other_idx = random.randrange(len(self.dataset))
-                while other_idx == idx:
+                while other_idx == idx or self.dataset[other_idx]['scan_id'] == data_dict['scan_id']:
                     other_idx = random.randrange(len(self.dataset))
                 # copy all scene‐related fields
-                for key in ('obj_locs', 'obj_fts', 'obj_boxes', 'obj_labels'):
+                for key in ('scan_id', 'obj_locs', 'obj_fts', 'obj_boxes', 'obj_labels'):
                     data_dict[key] = self.dataset[other_idx][key]
 
         data_dict['replace']  = replace_label # 0 → match, 1 → mismatch

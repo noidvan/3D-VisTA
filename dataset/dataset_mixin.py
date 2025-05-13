@@ -124,7 +124,7 @@ class LoadScannetMixin(object):
             file_path = os.path.join(folder_path, file_name)
             pcd_data = torch.load(file_path, weights_only=False)
             points, colors, features, instance_labels = pcd_data[0], pcd_data[1], pcd_data[2], pcd_data[-1]
-            points = points.cpu().numpy()
+            # points = points.cpu().numpy()
             instance_labels = instance_labels.astype(int)
             inst2label_path = os.path.join(SCAN_FAMILY_BASE, '3rscan', 'instance_id_to_label', f'{file_name}')
             inst_to_label = torch.load(inst2label_path)
