@@ -12,6 +12,7 @@ pipeline:
       txt_seq_length: 50
       pc_seq_length: 80
       pc_type: 'pred'
+      split: test_w_obj
   
   lang_encoder:
     name: bert_lang_encoder
@@ -76,8 +77,8 @@ pipeline:
     name: model_saver
     args:
       save_name: model.pth
-      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/reproduce_weights
-      load_name: scanqa_2d_finetune_20250510.pth
+      load_dir: /ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/project/reproduce_weights
+      load_name: scanqa_finetune_final.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

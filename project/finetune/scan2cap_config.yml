@@ -9,11 +9,11 @@ pipeline:
     name: caption_task
     args:
       tokenizer: bert_tokenizer
-      vocab: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_vocab.pth
-      corpus: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_corpus.pth
+      vocab: /ocean/projects/cis220039p/mdt2/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_vocab.pth
+      corpus: /ocean/projects/cis220039p/mdt2/datasets/3DVista/scanfamily/annotations/meta_data/scanrefer_corpus.pth
       txt_seq_length: 35
       pc_seq_length: 80
-      pc_type: 'gt'
+      pc_type: 'pred'
 
   lang_encoder:
     name: bert_lang_encoder
@@ -73,17 +73,22 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: scan2cap_2d_finetune_20250510
+      name: scan2cap_finetune_final
+
+  # logger:
+  #   name: tensorboard_logger
+  #   args:
+  #     log_dir: ../runs/
   
   saver:
     name: model_saver
     args:
-      save_name: scan2cap_2d_finetune_20250510.pth
+      save_name: scan2cap_finetune_final.pth
       save_dir: project/reproduce_weights
-      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
-      load_name: pretrain_2d_3r.pth
+      load_dir: /ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/project/pretrain_weights
+      load_name: pretrain_2d_final.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

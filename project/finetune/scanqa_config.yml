@@ -11,7 +11,7 @@ pipeline:
       tokenizer: bert_tokenizer
       txt_seq_length: 50
       pc_seq_length: 80
-      pc_type: 'gt'
+      pc_type: 'pred'
   
   lang_encoder:
     name: bert_lang_encoder
@@ -71,18 +71,23 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: scanqa_2d_finetune_20250510
+      name: scanqa_finetune_final
+
+  # logger:
+  #   name: tensorboard_logger
+  #   args:
+  #     log_dir: ../runs/
   
   saver:
     name: model_saver
     args:
-      save_name: scanqa_2d_finetune_20250510.pth
+      save_name: scanqa_finetune_final.pth
       save_dir: project/reproduce_weights
-      load_dir: /home/noidvan/projects/def-hugh/noidvan/3D-VisTA/project/pretrain_weights
-      load_name: pretrain_2d_3r.pth
-
+      load_dir: /ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/project/pretrain_weights
+      load_name: pretrain_2d_final.pth
+      
   batch_size: 64
   learning_rate: 1.0e-4
   grad_norm: 5.0
