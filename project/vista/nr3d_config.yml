@@ -81,8 +81,8 @@ pipeline:
     name: model_saver
     args:
       save_name: model.pth
-      load_dir: project/pretrain_weights
-      load_name: pretrain_2d_3r.pth
+      load_dir: /ocean/projects/cis220039p/mdt2/datasets/3DVista/3dvista_checkpoints
+      load_name: nr3d.pth
 
   batch_size: 64
   learning_rate: 1.0e-4

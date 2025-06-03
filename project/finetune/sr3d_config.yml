@@ -77,12 +77,12 @@ pipeline:
       entity: noidvan-university-of-toronto
       log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: sr3d_finetune_final
+      name: sr3d_2d_finetune_final_detach
   
   saver:
     name: model_saver
     args:
-      save_name: nr3d_finetune_final.pth
+      save_name: sr3d_2d_finetune_final_detach.pth
       save_dir: project/finetune_weights
       load_dir: /ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA/project/pretrain_weights
       load_name: pretrain_2d_final.pth

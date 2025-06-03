@@ -137,8 +137,8 @@ class PointTokenizeEncoder(nn.Module):
                 sa_n_points=[32, 16, None],
                 sa_n_samples=[32, 32, None],
                 sa_radii=[0.2, 0.4, None],
-                # sa_mlps=[[3, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
-                sa_mlps=[[11, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
+                sa_mlps=[[3, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
+                # sa_mlps=[[11, 64, 64, 128], [128, 128, 128, 256], [256, 256, 512, 768]],
             )
         elif backbone == 'pointnext':
             self.point_feature_extractor = PointNext()

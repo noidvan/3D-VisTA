@@ -214,70 +214,89 @@ class ModelEvaluationMixin(object):
         self.record_eval_step(eval_dict, epoch)
         return eval_dict['target_metric']
     def eval_referit3d(self, epoch):
-        eval_dict = {'target_metric': [], 'og_acc': [], 'og_acc_easy': [], 'og_acc_hard': [], 'og_acc_view_dep': [], 'og_acc_view_indep': [], 'txt_acc': [], 'obj_cls_raw_acc': [], 'obj_cls_pre_acc': [], 'obj_cls_post_acc': []}
-         # run
-        total_count = 0
-        total_easy_count = 0
-        total_hard_count = 0
-        total_view_dep_count = 0
-        total_view_indep_count = 0
+        """
+        Runs evaluation and aggregates both the *old* metrics and the four
+        new ones defined above.
+        """
+        eval_dict = {
+            # original keys …
+            'target_metric': [], 'og_acc': [], 'og_acc_easy': [], 'og_acc_hard': [],
+            'og_acc_view_dep': [], 'og_acc_view_indep': [], 'txt_acc': [],
+            'obj_cls_raw_acc': [], 'obj_cls_pre_acc': [], 'obj_cls_post_acc': [],
+            # ---------------- added keys ----------------
+            'tgt_cls_wrong': [],
+            'correct_sel_tgt_cls_wrong': [],
+            'wrong_sel_cls_matches_tgt': [],
+            'wrong_sel_cls_correct': [],
+        }
+
+        total_count = total_easy_count = total_hard_count = 0
+        total_view_dep_count = total_view_indep_count = 0
+        total_correct_sel_count = total_wrong_sel_count = 0     # new
+
         if self.eval_task:
             eval_results = []
-        for i, data_dict in enumerate(tqdm(self.test_data_loader)):
-            # forward
+
+        for data_dict in tqdm(self.test_data_loader):
             data_dict = self.forward_one(data_dict)
-            # get metrics
-            data_dict = self.get_metrics(data_dict)
-            # get count
-            count = data_dict['obj_fts'].shape[0]
-            easy_count = data_dict['easy_count']
-            hard_count = data_dict['hard_count']
-            view_dep_count = data_dict['view_dep_count']
+            data_dict = self.get_metrics(data_dict)             # << calls the new function >>
+
+            # ---------------- basic counters ----------------
+            count            = data_dict['obj_fts'].shape[0]
+            easy_count       = data_dict['easy_count']
+            hard_count       = data_dict['hard_count']
+            view_dep_count   = data_dict['view_dep_count']
             view_indep_count = data_dict['view_indep_count']
-            total_count += count
-            total_easy_count += easy_count
-            total_hard_count += hard_count
-            total_view_dep_count += view_dep_count
+            correct_sel_cnt  = data_dict['correct_sel_count']   # new
+            wrong_sel_cnt    = data_dict['wrong_sel_count']     # new
+
+            total_count            += count
+            total_easy_count       += easy_count
+            total_hard_count       += hard_count
+            total_view_dep_count   += view_dep_count
             total_view_indep_count += view_indep_count
-            # save object info
+            total_correct_sel_count += correct_sel_cnt          # new
+            total_wrong_sel_count   += wrong_sel_cnt            # new
+
+            # --------------- optional per-object dump ---------------
             if self.eval_task:
-                og3d_pred = torch.argmax(data_dict['og3d_logits'], dim=1)
+                og_pred  = torch.argmax(data_dict['og3d_logits'], dim=1)
                 item_ids = data_dict['data_idx']
                 for i in range(len(item_ids)):
                     eval_results.append({
                         "scene_id": item_ids[i],
-                        "bbox": data_dict['obj_boxes'][i][og3d_pred[i]].cpu().numpy().tolist(), 
-                        "correct": og3d_pred[i].item() == data_dict['tgt_object_id'][i].item()
+                        "bbox": data_dict['obj_boxes'][i][og_pred[i]].cpu().numpy().tolist(),
+                        "correct": og_pred[i].item() == data_dict['tgt_object_id'][i].item()
                     })
-            #  save eval dict
-            for key in eval_dict.keys():
-                if 'easy' in key:
-                    eval_dict[key].append(float(data_dict[key]) * easy_count)
-                elif 'hard' in key:
-                    eval_dict[key].append(float(data_dict[key]) * hard_count)
-                elif 'view_dep' in key:
-                    eval_dict[key].append(float(data_dict[key]) * view_dep_count)
-                elif 'view_indep' in key:
-                    eval_dict[key].append(float(data_dict[key]) * view_indep_count)
-                else:
-                    eval_dict[key].append(float(data_dict[key]) * count)
-        # record
+
+            # --------------- accumulate sums ------------------------
+            for key in eval_dict:
+                if 'easy'      in key: w = easy_count
+                elif 'hard'    in key: w = hard_count
+                elif 'view_dep'   in key: w = view_dep_count
+                elif 'view_indep' in key: w = view_indep_count
+                elif 'correct_sel' in key: w = correct_sel_cnt
+                elif 'wrong_sel'   in key: w = wrong_sel_cnt
+                else:               w = count
+                eval_dict[key].append(float(data_dict[key]) * w)
+
+        # ------------------ reduce to mean --------------------------
         for k, v in eval_dict.items():
-            if 'easy' in k:
-                eval_dict[k] = np.sum(v) / total_easy_count
-            elif 'hard' in k:
-                eval_dict[k] = np.sum(v) / total_hard_count
-            elif 'view_dep' in k:
-                eval_dict[k] = np.sum(v) / total_view_dep_count
-            elif 'view_indep' in k:
-                eval_dict[k] = np.sum(v) / total_view_indep_count
-            else:
-                eval_dict[k] = np.sum(v) / total_count
+            if 'easy'       in k: denom = total_easy_count
+            elif 'hard'     in k: denom = total_hard_count
+            elif 'view_dep'    in k: denom = total_view_dep_count
+            elif 'view_indep'  in k: denom = total_view_indep_count
+            elif 'correct_sel' in k: denom = total_correct_sel_count
+            elif 'wrong_sel'   in k: denom = total_wrong_sel_count
+            else: denom = total_count
+            eval_dict[k] = np.sum(v) / (denom + 1e-10)
+
         self.record_eval_step(eval_dict, epoch)
-        # save results
+
         if self.eval_task:
             with open('referit3d_result.json', 'w') as fp:
                 json.dump(eval_results, fp)
+
         return eval_dict['target_metric']
     
     def eval_qa(self, epoch):
@@ -595,18 +614,85 @@ class ModelMetricMixin(object):
         return data_dict
 
     def get_referit3d_metrics(self, data_dict):
-        data_dict['og_acc'] = (torch.argmax(data_dict['og3d_logits'], dim=1) == data_dict['tgt_object_id'].squeeze(1)).sum().item() / float(len(data_dict['tgt_object_id']))
-        # get og acc iou 25 and 50
-        og_pred = torch.argmax(data_dict['og3d_logits'], dim=1)
-        easy_correct = 0
-        hard_correct = 0
-        view_dep_correct = 0
-        view_indep_correct = 0
-        easy_count = 1e-10
-        hard_count = 1e-10
-        view_dep_count = 1e-10
-        view_indep_count = 1e-10
-        for i in range(len(og_pred)):
+        """
+        Computes all the original metrics **plus**
+            tgt_cls_wrong               – P( target obj mis-classified )
+            correct_sel_tgt_cls_wrong   – P( target obj mis-classified | grounding correct )
+            wrong_sel_cls_matches_tgt   – P( wrong obj classified as target’s type | grounding wrong )
+            wrong_sel_cls_correct       – P( wrong obj classified as its own type | grounding wrong )
+        All four are returned as *rates* in [0,1].
+        """
+
+        B = data_dict['og3d_logits'].size(0)           # batch size (number of scenes)
+        og_pred       = torch.argmax(data_dict['og3d_logits'], dim=1)           # [B]
+        tgt_idx       = data_dict['tgt_object_id'].squeeze(1)                   # [B]
+        raw_pred_lab  = torch.argmax(data_dict['obj_cls_raw_logits'], dim=2)    # [B, N]
+        obj_labels    = data_dict['obj_labels']                                  # [B, N]
+
+        # ------------------------------------------------------------------ #
+        # target object classification error (regardless of grounding)       #
+        # ------------------------------------------------------------------ #
+        tgt_lab       = obj_labels[torch.arange(B), tgt_idx]                   # [B]
+        tgt_pred_lab  = raw_pred_lab[torch.arange(B), tgt_idx]                 # [B]
+        tgt_cls_wrong_bool = (tgt_pred_lab != tgt_lab)                         # [B]
+
+        # ------------------------------------------------------------------ #
+        # masks for correct / wrong grounding                                #
+        # ------------------------------------------------------------------ #
+        correct_sel_mask = (og_pred == tgt_idx)                                # [B]
+        wrong_sel_mask   = ~correct_sel_mask                                   # [B]  (logical NOT)
+
+        # ------------------------------------------------------------------ #
+        # 2) target cls wrong *given* correct grounding                       #
+        # ------------------------------------------------------------------ #
+        correct_sel_tgt_cls_wrong_bool = tgt_cls_wrong_bool & correct_sel_mask
+
+        # ------------------------------------------------------------------ #
+        # 3) & 4) stats that depend on the object that *was* selected         #
+        # ------------------------------------------------------------------ #
+        sel_lab        = obj_labels[torch.arange(B), og_pred]                  # label of selected object
+        sel_pred_lab   = raw_pred_lab[torch.arange(B), og_pred]                # predicted label of selected object
+
+        wrong_sel_cls_matches_tgt_bool = wrong_sel_mask & (sel_pred_lab == tgt_lab)
+        wrong_sel_cls_correct_bool     = wrong_sel_mask & (sel_pred_lab == sel_lab)
+
+        # ------------------------------------------------------------------ #
+        # counts for denominators                                            #
+        # ------------------------------------------------------------------ #
+        correct_sel_cnt = correct_sel_mask.sum().item()
+        wrong_sel_cnt   = wrong_sel_mask.sum().item()
+
+        # ---------- pack everything back into the dict -------------------- #
+        # (original metrics stay exactly the same)                           #
+        data_dict['og_acc'] = (og_pred == tgt_idx).float().mean().item()
+
+        # ---------- new metrics ------------------------------------------- #
+        data_dict['tgt_cls_wrong']              = tgt_cls_wrong_bool.float().mean().item()
+        data_dict['correct_sel_tgt_cls_wrong']  = (
+            correct_sel_tgt_cls_wrong_bool.float().sum().item()
+            / (correct_sel_cnt + 1e-10)
+        )
+        data_dict['wrong_sel_cls_matches_tgt']  = (
+            wrong_sel_cls_matches_tgt_bool.float().sum().item()
+            / (wrong_sel_cnt + 1e-10)
+        )
+        data_dict['wrong_sel_cls_correct']      = (
+            wrong_sel_cls_correct_bool.float().sum().item()
+            / (wrong_sel_cnt + 1e-10)
+        )
+
+        # we also return the counts so the outer loop can weight averages
+        data_dict['correct_sel_count'] = correct_sel_cnt
+        data_dict['wrong_sel_count']   = wrong_sel_cnt
+
+        # (everything below this line is identical to the old version) ------
+        # ... existing easy / hard / view-dep logic ...
+        # ------------------------------------------------------------------ #
+        # easy / hard / view-dep bookkeeping (unchanged)
+        easy_correct = hard_correct = view_dep_correct = view_indep_correct = 0
+        easy_count = hard_count = view_dep_count = view_indep_count = 1e-10
+
+        for i in range(B):
             if data_dict['is_hard'][i]:
                 hard_count += 1
             else:
@@ -615,7 +701,7 @@ class ModelMetricMixin(object):
                 view_dep_count += 1
             else:
                 view_indep_count += 1
-            if data_dict['tgt_object_id'][i] == og_pred[i]:
+            if tgt_idx[i] == og_pred[i]:
                 if data_dict['is_hard'][i]:
                     hard_correct += 1
                 else:
@@ -624,22 +710,37 @@ class ModelMetricMixin(object):
                     view_dep_correct += 1
                 else:
                     view_indep_correct += 1
-        data_dict['og_acc_easy'] =  easy_correct / easy_count
-        data_dict['og_acc_hard'] =  hard_correct / hard_count
-        data_dict['og_acc_view_dep'] =  view_dep_correct / view_dep_count
-        data_dict['og_acc_view_indep'] =  view_indep_correct / view_indep_count
-        data_dict['easy_count'] = easy_count
-        data_dict['hard_count'] = hard_count
-        data_dict['view_dep_count'] = view_dep_count
-        data_dict['view_indep_count'] = view_indep_count
-        # get other
-        data_dict['txt_acc'] = torch.sum(torch.argmax(data_dict['txt_cls_logits'], dim=1) == data_dict["tgt_object_label"].squeeze(1)).item() / float(len(data_dict['tgt_object_label']))
-        data_dict['obj_cls_post_acc'] = torch.sum(torch.argmax(data_dict['obj_cls_post_logits'], dim=2)[data_dict['obj_masks']] == data_dict["obj_labels"][data_dict['obj_masks']]).item() / float(data_dict['obj_masks'].sum().item() + 1e-10)
-        data_dict['obj_cls_pre_acc'] = torch.sum(torch.argmax(data_dict['obj_cls_pre_logits'], dim=2)[data_dict['obj_masks']] == data_dict["obj_labels"][data_dict['obj_masks']]).item() / float(data_dict['obj_masks'].sum().item() + 1e-10)
-        data_dict['obj_cls_raw_acc'] = torch.sum(torch.argmax(data_dict['obj_cls_raw_logits'], dim=2)[data_dict['obj_masks']] == data_dict["obj_labels"][data_dict['obj_masks']]).item() / float(data_dict['obj_masks'].sum().item() + 1e-10)
+
+        data_dict['og_acc_easy']       = easy_correct / easy_count
+        data_dict['og_acc_hard']       = hard_correct / hard_count
+        data_dict['og_acc_view_dep']   = view_dep_correct / view_dep_count
+        data_dict['og_acc_view_indep'] = view_indep_correct / view_indep_count
+        data_dict['easy_count']        = easy_count
+        data_dict['hard_count']        = hard_count
+        data_dict['view_dep_count']    = view_dep_count
+        data_dict['view_indep_count']  = view_indep_count
+
+        # other per-scene accuracies (unchanged)
+        data_dict['txt_acc'] = (
+            (torch.argmax(data_dict['txt_cls_logits'], dim=1)
+            == data_dict["tgt_object_label"].squeeze(1)).float().mean().item()
+        )
+        mask = data_dict['obj_masks']
+        data_dict['obj_cls_post_acc'] = (
+            (torch.argmax(data_dict['obj_cls_post_logits'], dim=2)[mask]
+            == data_dict["obj_labels"][mask]).float().mean().item()
+        )
+        data_dict['obj_cls_pre_acc'] = (
+            (torch.argmax(data_dict['obj_cls_pre_logits'], dim=2)[mask]
+            == data_dict["obj_labels"][mask]).float().mean().item()
+        )
+        data_dict['obj_cls_raw_acc'] = (
+            (raw_pred_lab[mask] == data_dict["obj_labels"][mask]).float().mean().item()
+        )
 
         data_dict['target_metric'] = data_dict['og_acc']
         return data_dict
+
         
     def get_qa_metrics(self, data_dict):
         # og, txt

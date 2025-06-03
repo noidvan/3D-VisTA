@@ -25,7 +25,7 @@ pipeline:
     args:
       backbone: pointnet++
       hidden_size: 768
-      path: /home/noidvan/projects/def-hugh/noidvan/datasets/3DVista/point_encoder_weights/point_encoder_2d.pt
+      path: /ocean/projects/cis220039p/mdt2/datasets/3DVista/3dvista_checkpoints/pointnet_encoder/point_encoder_3d.pt
       freeze_feature: True
       num_attention_heads: 12
       spatial_dim: 5
@@ -76,14 +76,14 @@ pipeline:
     name: wandb_logger
     args:
       entity: noidvan-university-of-toronto
-      log_dir: /home/noidvan/projects/def-hugh/noidvan/logs
+      log_dir: /ocean/projects/cis220039p/mdt2/ylin23/logs
       project: 3D-VisTA-Finetune
-      name: nr3d_2d_scratch_20250509
+      name: nr3d_3d_scratch
   
   saver:
     name: model_saver
     args:
-      save_name: nr3d_2d_scratch_20250509.pth
+      save_name: nr3d_3d_scratch.pth
       save_dir: project/reproduce_weights
       
   batch_size: 64

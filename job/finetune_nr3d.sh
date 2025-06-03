@@ -9,4 +9,4 @@ export RUN_DIR=/ocean/projects/cis220039p/mdt2/ylin23/scanrefer/3D-VisTA
 
 cd $RUN_DIR
 
-python3 run.py --config project/finetune/nr3d_config.yml
+python3 run.py --config project/vista_reproduce/nr3d_config.yml
